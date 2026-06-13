@@ -9,7 +9,7 @@ import com.featurepulse.internal.model.DiscoveredElement
 internal object ViewTreeScanner {
 
     /**
-     * Recursively scans [root] and returns all interactive views paired with their featureId.
+     * Recursively scans [root] and returns all interactive views paired with their DiscoveredElement.
      * Must be called off the main thread (caller's responsibility).
      * Max depth 50 to guard against infinite loops in malformed hierarchies.
      */
@@ -53,7 +53,8 @@ internal object ViewTreeScanner {
 
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
-                traverse(view.getChildAt(i), screenName, result, depth + 1, maxDepth)
+                val child = view.getChildAt(i) ?: continue
+                traverse(child, screenName, result, depth + 1, maxDepth)
             }
         }
     }
