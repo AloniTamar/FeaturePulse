@@ -34,6 +34,34 @@ featuresRouter.get('/apps/:appId/features', jwtAuth, async (req, res) => {
   }
 })
 
+// GET /api/v1/apps/:appId/export?format=json|csv
+// IMPORTANT: must be registered BEFORE /:featureId to avoid route shadowing
+featuresRouter.get('/apps/:appId/export', jwtAuth, async (req, res) => {
+  try {
+    const features = await prisma.feature.findMany({ where: { appId: req.params.appId } })
+    if ((req.query.format as string) === 'csv') {
+      const csvEscape = (val: string) => `"${val.replace(/"/g, '""')}"`
+      const header = 'featureId,elementType,resourceName,screenName,state,lastInteraction\n'
+      const rows = features.map(f =>
+        [
+          csvEscape(f.id),
+          csvEscape(f.elementType),
+          csvEscape(f.resourceName ?? ''),
+          csvEscape(f.screenName),
+          csvEscape(f.state),
+          csvEscape(f.lastInteraction?.toISOString() ?? ''),
+        ].join(',')
+      ).join('\n')
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', 'attachment; filename="features.csv"')
+      return res.send(header + rows)
+    }
+    res.json(features)
+  } catch {
+    res.status(503).json({ error: 'Service unavailable' })
+  }
+})
+
 // GET /api/v1/features/:featureId
 featuresRouter.get('/:featureId', jwtAuth, async (req, res) => {
   try {
@@ -62,32 +90,16 @@ featuresRouter.get('/:featureId/timeline', jwtAuth, async (req, res) => {
 
 // PATCH /api/v1/features/:featureId/ignore
 featuresRouter.patch('/:featureId/ignore', jwtAuth, async (req, res) => {
-  const { ignore } = req.body as { ignore: boolean }
+  const { ignore } = req.body as { ignore: unknown }
+  if (typeof ignore !== 'boolean') {
+    return res.status(400).json({ error: '`ignore` must be a boolean' })
+  }
   try {
     const feature = await prisma.feature.update({
       where: { id: req.params.featureId },
       data: { isIgnored: ignore },
     })
     res.json(feature)
-  } catch {
-    res.status(503).json({ error: 'Service unavailable' })
-  }
-})
-
-// GET /api/v1/apps/:appId/export?format=json|csv
-featuresRouter.get('/apps/:appId/export', jwtAuth, async (req, res) => {
-  try {
-    const features = await prisma.feature.findMany({ where: { appId: req.params.appId } })
-    if ((req.query.format as string) === 'csv') {
-      const header = 'featureId,elementType,resourceName,screenName,state,lastInteraction\n'
-      const rows = features.map(f =>
-        `${f.id},${f.elementType},${f.resourceName ?? ''},${f.screenName},${f.state},${f.lastInteraction?.toISOString() ?? ''}`
-      ).join('\n')
-      res.setHeader('Content-Type', 'text/csv')
-      res.setHeader('Content-Disposition', 'attachment; filename="features.csv"')
-      return res.send(header + rows)
-    }
-    res.json(features)
   } catch {
     res.status(503).json({ error: 'Service unavailable' })
   }
