@@ -6,31 +6,31 @@ import java.security.MessageDigest
 
 internal object Fingerprinter {
 
-    fun generate(screenName: String, resourceName: String?, viewClass: String, hierarchyPath: String): String {
+    internal fun generate(screenName: String, resourceName: String?, viewClass: String, hierarchyPath: String): String {
         val input = if (resourceName != null) {
             "$screenName:$resourceName"
         } else {
             "$screenName:$viewClass:$hierarchyPath"
         }
-        return sha256(input).take(64)
+        return sha256(input)
     }
 
-    fun getResourceName(view: View): String? = try {
+    internal fun getResourceName(view: View): String? = try {
         if (view.id == View.NO_ID) null
         else view.resources?.getResourceEntryName(view.id)
     } catch (e: Exception) {
         null
     }
 
-    fun getHierarchyPath(view: View): String {
+    internal fun getHierarchyPath(view: View): String {
         val parts = ArrayDeque<String>()
-        var current: View? = view
+        var current: View = view
         var parent = view.parent
         while (parent is ViewGroup) {
             val vg: ViewGroup = parent
             val index = (0 until vg.childCount)
                 .firstOrNull { vg.getChildAt(it) === current } ?: 0
-            parts.addFirst("${current!!.javaClass.simpleName}[$index]")
+            parts.addFirst("${current.javaClass.simpleName}[$index]")
             current = vg
             parent = vg.parent
         }
