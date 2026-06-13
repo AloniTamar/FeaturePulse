@@ -1,26 +1,28 @@
-// portal/src/components/TimelineChart.tsx
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import LineChart from './LineChart'
 import type { TimelineRow } from '../api/client'
 
 interface Props { data: TimelineRow[] }
 
-export default function TimelineChart({ data }: Props) {
-  const chartData = data.map(row => ({
-    date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    rate: parseFloat((row.interactionRate * 100).toFixed(2)),
-    interactions: row.interactions,
-    impressions: row.impressions,
-  }))
+const N = 30
 
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-        <CartesianGrid stroke="#F1F5F9" />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} />
-        <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} unit="%" />
-        <Tooltip formatter={(v) => [`${Number(v).toFixed(2)}%`, 'Interaction rate']} />
-        <Line type="monotone" dataKey="rate" stroke="#4F46E5" strokeWidth={2} dot={false} />
-      </LineChart>
-    </ResponsiveContainer>
-  )
+function buildLabels(data: TimelineRow[]): string[] {
+  if (data.length > 0) {
+    return data.map((r) =>
+      new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    )
+  }
+  return Array.from({ length: N }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (N - 1 - i))
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  })
+}
+
+export default function TimelineChart({ data }: Props) {
+  const labels = buildLabels(data)
+  const values = data.length > 0
+    ? data.map((r) => parseFloat((r.interactionRate * 100).toFixed(2)))
+    : Array(N).fill(0)
+
+  return <LineChart labels={labels} data={values} height={220} />
 }
