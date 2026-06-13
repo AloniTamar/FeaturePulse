@@ -48,4 +48,14 @@ data class PulseConfig internal constructor(
             )
         }
     }
+
+    companion object {
+        val REMOTE_DEFAULTS: Map<String, Any> = mapOf(
+            "enabled"         to true,
+            "syncIntervalMs"  to 1_800_000,
+            "batchSize"       to 500,
+            "minImpressionMs" to 1000,
+            "samplingRate"    to 1.0
+        )
+    }
 }
