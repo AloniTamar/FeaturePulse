@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model App {
+  id           String   @id @default(uuid())
+  name         String
+  packageName  String
+  apiKey       String   @unique
+  apiKeyHash   String
+  ownerEmail   String
+  createdAt    DateTime @default(now())
+  config       Json     @default("{}")
+  features     Feature[]
+  rawEvents    RawEvent[]
+}
+
+model Feature {
+  id               String    @id
+  appId            String
+  app              App       @relation(fields: [appId], references: [id])
+  elementType      String
+  resourceName     String?
+  screenName       String
+  hierarchyPath    String?
+  firstSeen        DateTime  @default(now())
+  lastInteraction  DateTime?
+  state            String    @default("THRIVING")
+  isIgnored        Boolean   @default(false)
+  metadata         Json      @default("{}")
+  dailyAggregates  DailyAggregate[]
+  stateTransitions StateTransition[]
+
+  @@index([appId, state])
+  @@index([appId, screenName])
+}
+
+model RawEvent {
+  id        String   @id
+  featureId String
+  appId     String
+  app       App      @relation(fields: [appId], references: [id])
+  eventType String
+  timestamp DateTime
+  sessionId String?
+  deviceId  String?
+
+  @@index([featureId, timestamp])
+  @@index([appId, timestamp])
+}
+
+model DailyAggregate {
+  featureId       String
+  date            DateTime @db.Date
+  impressions     Int      @default(0)
+  interactions    Int      @default(0)
+  uniqueUsers     Int      @default(0)
+  interactionRate Float    @default(0.0)
+  feature         Feature  @relation(fields: [featureId], references: [id])
+
+  @@id([featureId, date])
+  @@index([date])
+}
+
+model StateTransition {
+  id        Int      @id @default(autoincrement())
+  featureId String
+  feature   Feature  @relation(fields: [featureId], references: [id])
+  oldState  String?
+  newState  String
+  changedAt DateTime @default(now())
+  reason    String?
+}
