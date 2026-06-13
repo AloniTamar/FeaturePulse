@@ -18,9 +18,12 @@ internal object InteractiveViewFilter {
     )
 
     fun isInteractive(view: View): Boolean {
-        if (view.isClickable) return true
-        val name = view.javaClass.name
-        val superName = view.javaClass.superclass?.name ?: ""
-        return ALWAYS_INTERACTIVE.any { it == name || it == superName }
+        if (view.isClickable || view.hasOnClickListeners()) return true
+        var cls: Class<*>? = view.javaClass
+        while (cls != null && cls != View::class.java) {
+            if (cls.name in ALWAYS_INTERACTIVE) return true
+            cls = cls.superclass
+        }
+        return false
     }
 }

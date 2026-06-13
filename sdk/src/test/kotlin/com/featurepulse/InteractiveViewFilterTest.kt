@@ -38,4 +38,13 @@ class InteractiveViewFilterTest {
         val view = View(ctx).apply { setOnClickListener { } }
         assertTrue(InteractiveViewFilter.isInteractive(view))
     }
+
+    @Test
+    fun `View with click listener but isClickable=false is still interactive`() {
+        val view = View(ctx).apply {
+            setOnClickListener { }
+            isClickable = false  // explicitly override what setOnClickListener set
+        }
+        assertTrue(InteractiveViewFilter.isInteractive(view))
+    }
 }
