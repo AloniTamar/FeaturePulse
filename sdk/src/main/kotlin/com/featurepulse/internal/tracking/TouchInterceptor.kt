@@ -15,10 +15,24 @@ internal class TouchInterceptor(
     private val rootView: View,
     private val onTap: (View) -> Unit
 ) : Window.Callback by original {
+    private val touchSlop = android.view.ViewConfiguration.get(rootView.context).scaledTouchSlop.toFloat()
+    private var downX = 0f
+    private var downY = 0f
 
     override fun dispatchTouchEvent(event: MotionEvent?): Boolean {
-        if (event?.action == MotionEvent.ACTION_UP) {
-            findViewAt(rootView, event.rawX, event.rawY)?.let { onTap(it) }
+        when (event?.action) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.rawX
+                downY = event.rawY
+            }
+            MotionEvent.ACTION_UP -> {
+                val dx = event.rawX - downX
+                val dy = event.rawY - downY
+                val moved = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                if (moved <= touchSlop) {
+                    findViewAt(rootView, event.rawX, event.rawY)?.let { onTap(it) }
+                }
+            }
         }
         return original.dispatchTouchEvent(event)
     }
@@ -26,8 +40,8 @@ internal class TouchInterceptor(
     private fun findViewAt(root: View, x: Float, y: Float): View? {
         val loc = IntArray(2)
         root.getLocationOnScreen(loc)
-        val inBounds = x >= loc[0] && x <= loc[0] + root.width
-                && y >= loc[1] && y <= loc[1] + root.height
+        val inBounds = x >= loc[0] && x < loc[0] + root.width
+                && y >= loc[1] && y < loc[1] + root.height
         if (!inBounds) return null
 
         if (root is ViewGroup) {
