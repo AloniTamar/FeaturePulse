@@ -19,7 +19,8 @@ internal class ActivityTracker(
     private val config: PulseConfig,
     private val eventRecorder: EventRecorder,
     private val visibilityTracker: VisibilityTracker,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val onScreenChanged: (String) -> Unit = {}
 ) : Application.ActivityLifecycleCallbacks {
 
     private val registeredActivities = java.util.WeakHashMap<Activity, Boolean>()
@@ -27,6 +28,7 @@ internal class ActivityTracker(
     override fun onActivityResumed(activity: Activity) {
         val screenName = activity.javaClass.simpleName
         if (config.excludedScreens.contains(screenName)) return
+        onScreenChanged(screenName)
 
         val root = activity.window.decorView
 

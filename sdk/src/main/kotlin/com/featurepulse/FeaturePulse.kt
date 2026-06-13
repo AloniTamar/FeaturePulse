@@ -31,6 +31,7 @@ object FeaturePulse {
 
     @Volatile private var initialized = false
     @Volatile private var paused = false
+    @Volatile private var currentScreen = ""
 
     @JvmStatic
     fun init(application: Application) =
@@ -40,10 +41,14 @@ object FeaturePulse {
             .build())
 
     @JvmStatic
+    @Synchronized
     fun init(application: Application, config: PulseConfig) {
         if (initialized) return
         this.config = config
-        if (!config.enabled) return
+        if (!config.enabled) {
+            initialized = true
+            return
+        }
 
         val deviceId = getOrCreateDeviceId(application)
 
@@ -55,7 +60,6 @@ object FeaturePulse {
         // Restore events buffered before last kill
         persistence.load().forEach { buffer.add(it) }
 
-        var currentScreen = ""
         eventRecorder = EventRecorder(buffer, sessionManager, deviceId) { currentScreen }
 
         visibilityTracker = VisibilityTracker(
@@ -64,7 +68,9 @@ object FeaturePulse {
             if (!paused) eventRecorder.recordImpression(view)
         }
 
-        val activityTracker = ActivityTracker(config, eventRecorder, visibilityTracker, scope)
+        val activityTracker = ActivityTracker(config, eventRecorder, visibilityTracker, scope) { screen ->
+            currentScreen = screen
+        }
         application.registerActivityLifecycleCallbacks(activityTracker)
 
         SyncWorker.schedule(application, config)
@@ -73,10 +79,11 @@ object FeaturePulse {
 
     @JvmStatic fun pause()   { paused = true }
     @JvmStatic fun resume()  { paused = false }
-    @JvmStatic fun disable() { paused = true; buffer.clear(); persistence.clear() }
+    @JvmStatic fun disable() { if (!initialized) return; paused = true; buffer.clear(); persistence.clear() }
 
     @JvmStatic
     fun flush() {
+        if (!initialized) return
         scope.launch {
             val events = buffer.drainAll()
             if (events.isEmpty()) return@launch
