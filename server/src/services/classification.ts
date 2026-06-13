@@ -54,17 +54,15 @@ export async function classifyFeature(featureId: string): Promise<FeatureState> 
     ? Math.floor((Date.now() - feature.lastInteraction.getTime()) / 86_400_000)
     : null
 
-  // Group into 7-day weekly buckets
-  const byWeek = new Map<number, number[]>()
-  agg.forEach((row, i) => {
-    const week = Math.floor(i / 7)
-    if (!byWeek.has(week)) byWeek.set(week, [])
-    byWeek.get(week)!.push(row.interactionRate)
-  })
-  const weeklyRates: WeeklyRate[] = Array.from(byWeek.entries())
-    .sort(([a], [b]) => b - a)
-    .map(([week, rates]) => ({ week, rate: rates.reduce((s, r) => s + r, 0) / rates.length }))
-    .reverse()
+  // agg is DESC order (most recent first); reverse to get oldest-first for bucketing
+  const ascending = [...agg].reverse()
+  const weeklyRates: WeeklyRate[] = [0, 1]
+    .map(w => {
+      const slice = ascending.slice(w * 7, (w + 1) * 7)
+      if (slice.length === 0) return null
+      return { week: w + 1, rate: slice.reduce((s, r) => s + r.interactionRate, 0) / slice.length }
+    })
+    .filter((w): w is WeeklyRate => w !== null)
 
   return determineState(agg[0]?.interactionRate ?? 0, weeklyRates, daysSince)
 }

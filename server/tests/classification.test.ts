@@ -13,7 +13,12 @@ describe('determineState', () => {
 
   test('DORMANT when rate < 1% for 2+ weeks', () => {
     const rates = [{ week: 1, rate: 0.005 }, { week: 2, rate: 0.004 }]
-    expect(determineState(0.004, rates, 20)).toBe('DORMANT')
+    expect(determineState(0.004, rates, 5)).toBe('DORMANT')
+  })
+
+  test('rate exactly 0.01 is NOT DORMANT (strict less-than boundary)', () => {
+    const rates = [{ week: 1, rate: 0.01 }, { week: 2, rate: 0.01 }]
+    expect(determineState(0.01, rates, 5)).not.toBe('DORMANT')
   })
 
   test('DECLINING when rate drops >20% WoW', () => {
