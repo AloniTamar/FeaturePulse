@@ -36,10 +36,10 @@ class VisibilityTrackerTest {
             layout(0, 0, 100, 100)
         }
         tracker.trackViews(listOf(view))
-        Thread.sleep(150)
-        // In Robolectric, Handler posts are executed synchronously via ShadowLooper
+        // getGlobalVisibleRect returns false for unattached views in Robolectric, so schedulePending
+        // is never called here. Full impression verification is covered in instrumented tests.
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
-        assertTrue(impressionCount >= 0) // confirms no crash; functional test in instrumented tests
+        assertTrue(impressionCount >= 0) // no crash: confirms VisibilityTracker handles unattached views gracefully
     }
 
     @Test
