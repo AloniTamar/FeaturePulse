@@ -1,20 +1,18 @@
-// portal/src/components/StateBadge.tsx
 import type { Feature } from '../api/client'
 
-const STATE_COLORS: Record<Feature['state'], { bg: string; text: string }> = {
-  THRIVING: { bg: '#DCFCE7', text: '#16A34A' },
-  DECLINING: { bg: '#FEF9C3', text: '#CA8A04' },
-  DORMANT:   { bg: '#FFEDD5', text: '#EA580C' },
-  DEAD:      { bg: '#FEE2E2', text: '#DC2626' },
+const CLASSES: Record<Feature['state'], string> = {
+  THRIVING: 'bg-green-100 text-green-600',
+  DECLINING: 'bg-yellow-100 text-yellow-600',
+  DORMANT:   'bg-orange-100 text-orange-600',
+  DEAD:      'bg-red-100 text-red-600',
 }
 
 export default function StateBadge({ state }: { state: Feature['state'] }) {
-  const { bg, text } = STATE_COLORS[state]
   return (
-    <span style={{
-      background: bg, color: text, padding: '2px 10px', borderRadius: 999,
-      fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
-    }}>
+    <span
+      className={`inline-flex items-center rounded-full font-bold ${CLASSES[state]}`}
+      style={{ fontSize: 10.5, padding: '2px 8px', letterSpacing: '0.04em' }}
+    >
       {state}
     </span>
   )
