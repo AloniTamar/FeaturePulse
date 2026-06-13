@@ -7,14 +7,19 @@ import com.google.gson.reflect.TypeToken
 
 internal class BufferPersistence(context: Context) {
 
-    private val prefs = context.getSharedPreferences("fp_buffer", Context.MODE_PRIVATE)
-    private val gson = Gson()
-    private val KEY = "pending_events"
+    companion object {
+        private const val KEY = "pending_events"
+    }
 
+    private val prefs = context.applicationContext.getSharedPreferences("fp_buffer", Context.MODE_PRIVATE)
+    private val gson = Gson()
+
+    @Synchronized
     fun save(events: List<RawEvent>) {
         prefs.edit().putString(KEY, gson.toJson(events)).apply()
     }
 
+    @Synchronized
     fun load(): List<RawEvent> {
         val json = prefs.getString(KEY, null) ?: return emptyList()
         return try {
@@ -26,6 +31,7 @@ internal class BufferPersistence(context: Context) {
         }
     }
 
+    @Synchronized
     fun clear() {
         prefs.edit().remove(KEY).apply()
     }
