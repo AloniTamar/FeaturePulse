@@ -52,7 +52,7 @@ export default function DeadFeaturesList({ features, onIgnore }: Props) {
             className="text-slate-400 border border-slate-200 bg-white rounded hover:bg-slate-100 hover:text-slate-700 transition-colors flex-shrink-0"
             style={{ fontSize: 11, padding: '3px 8px' }}
           >
-            Ignore
+            {f.isIgnored ? 'Unignore' : 'Ignore'}
           </button>
         </div>
       ))}
