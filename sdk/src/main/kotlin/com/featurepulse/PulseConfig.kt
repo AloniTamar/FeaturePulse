@@ -31,7 +31,7 @@ data class PulseConfig internal constructor(
         fun setBatchSize(size: Int) = apply { batchSize = size }
         fun setSyncInterval(amount: Long, unit: TimeUnit) = apply { syncIntervalMs = unit.toMillis(amount) }
         fun setSyncOnWifiOnly(wifiOnly: Boolean) = apply { syncOnWifiOnly = wifiOnly }
-        fun setExcludedScreens(screens: List<String>) = apply { excludedScreens = screens }
+        fun setExcludedScreens(screens: List<String>) = apply { excludedScreens = screens.toList() }
         fun setMinImpressionDuration(durationMs: Long) = apply { minImpressionDurationMs = durationMs }
         fun setEnabled(enabled: Boolean) = apply { this.enabled = enabled }
 
@@ -39,6 +39,9 @@ data class PulseConfig internal constructor(
             require(apiKey.isNotBlank()) { "PulseConfig: apiKey must not be blank" }
             require(appId.isNotBlank()) { "PulseConfig: appId must not be blank" }
             require(batchSize in 1..1000) { "PulseConfig: batchSize must be 1–1000" }
+            require(serverUrl.isNotBlank()) { "PulseConfig: serverUrl must not be blank" }
+            require(syncIntervalMs > 0) { "PulseConfig: syncIntervalMs must be positive" }
+            require(minImpressionDurationMs >= 0) { "PulseConfig: minImpressionDurationMs must be non-negative" }
             return PulseConfig(
                 apiKey, appId, serverUrl, batchSize, syncIntervalMs,
                 syncOnWifiOnly, excludedScreens, minImpressionDurationMs, enabled
