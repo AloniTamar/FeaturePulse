@@ -32,6 +32,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.11.1")
