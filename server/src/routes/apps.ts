@@ -7,10 +7,13 @@ export const appsRouter = Router()
 
 // SDK fetches remote config via this (no auth required — public config only)
 appsRouter.get('/config', async (req, res) => {
-  const appId = req.query.appId as string
-  if (!appId) return res.status(400).json({ error: 'appId required' })
+  const appId = req.query.appId
+  if (typeof appId !== 'string' || !appId) return res.status(400).json({ error: 'appId required' })
   const app = await prisma.app.findUnique({ where: { id: appId } })
   if (!app) return res.status(404).json({ error: 'App not found' })
+  const storedConfig = app.config && typeof app.config === 'object' && !Array.isArray(app.config)
+    ? app.config as Record<string, unknown>
+    : {}
   res.json({
     enabled: true,
     syncIntervalMs: 1800000,
@@ -19,7 +22,7 @@ appsRouter.get('/config', async (req, res) => {
     excludeScreens: [],
     samplingRate: 1.0,
     sdkMinVersion: '1.0.0',
-    ...(app.config as object),
+    ...storedConfig,
   })
 })
 

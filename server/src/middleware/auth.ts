@@ -13,11 +13,14 @@ export async function apiKeyAuth(req: AuthRequest, res: Response, next: NextFunc
   const key = req.headers['x-api-key'] as string | undefined
   if (!key) return res.status(401).json({ error: 'Missing X-API-Key header' })
 
-  const app = await prisma.app.findUnique({ where: { apiKey: key } })
-  if (!app) return res.status(401).json({ error: 'Invalid API key' })
-
-  req.appId = app.id
-  next()
+  try {
+    const app = await prisma.app.findUnique({ where: { apiKey: key } })
+    if (!app) return res.status(401).json({ error: 'Invalid API key' })
+    req.appId = app.id
+    next()
+  } catch {
+    res.status(503).json({ error: 'Service unavailable' })
+  }
 }
 
 /** Portal endpoints: validates Authorization: Bearer <jwt> */
