@@ -32,11 +32,11 @@ class SessionManagerTest {
     @Test
     fun `onBackground followed by foreground beyond timeout yields new session`() {
         val sm = SessionManager(sessionTimeoutMs = 50L)
-        sm.getOrCreateSession()
+        val s1 = sm.getOrCreateSession()
         sm.onBackground()
         Thread.sleep(100)
-        val newSession = sm.getOrCreateSession()
-        assertTrue(newSession.startsWith("sess_"))
+        val s2 = sm.getOrCreateSession()
+        assertNotEquals(s1, s2)
     }
 
     @Test
