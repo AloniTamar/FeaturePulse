@@ -75,4 +75,6 @@ model StateTransition {
   newState  String
   changedAt DateTime @default(now())
   reason    String?
+
+  @@index([featureId, changedAt])
 }
