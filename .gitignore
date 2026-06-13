@@ -1,0 +1,29 @@
+# Build outputs
+build/
+.gradle/
+**/build/
+
+# Android
+*.iml
+local.properties
+.externalNativeBuild/
+.cxx/
+
+# IntelliJ / Android Studio
+.idea/
+*.iws
+*.ipr
+out/
+captures/
+
+# Node.js
+node_modules/
+dist/
+.env
+*.env.local
+
+# macOS
+.DS_Store
+
+# Worktrees
+.worktrees/
