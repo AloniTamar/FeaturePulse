@@ -8,7 +8,7 @@ export const eventsRouter = Router()
 
 const DiscoverSchema = z.object({
   features: z.array(z.object({
-    featureId:     z.string(),
+    featureId:     z.string().min(1).max(64),
     elementType:   z.string(),
     resourceName:  z.string().nullable(),
     screenName:    z.string(),
@@ -20,16 +20,27 @@ eventsRouter.post('/batch', apiKeyAuth, async (req: AuthRequest, res) => {
   const result = BatchPayloadSchema.safeParse(req.body)
   if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
-  const ingested = await ingestBatch(req.appId!, result.data)
-  res.json(ingested)
+  try {
+    const ingested = await ingestBatch(req.appId!, result.data)
+    res.json(ingested)
+  } catch {
+    res.status(503).json({ error: 'Service unavailable' })
+  }
 })
 
 eventsRouter.post('/discover', apiKeyAuth, async (req: AuthRequest, res) => {
   const result = DiscoverSchema.safeParse(req.body)
   if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
+  const errors: string[] = []
+  let registered = 0
   for (const f of result.data.features) {
-    await upsertFeature(req.appId!, f.featureId, f.elementType, f.resourceName, f.screenName, f.hierarchyPath)
+    try {
+      await upsertFeature(req.appId!, f.featureId, f.elementType, f.resourceName, f.screenName, f.hierarchyPath)
+      registered++
+    } catch {
+      errors.push(`${f.featureId}: failed to register`)
+    }
   }
-  res.json({ registered: result.data.features.length })
+  res.json({ registered, errors })
 })
