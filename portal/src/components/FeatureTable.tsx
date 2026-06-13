@@ -1,4 +1,3 @@
-// portal/src/components/FeatureTable.tsx
 import { useNavigate } from 'react-router-dom'
 import StateBadge from './StateBadge'
 import type { Feature } from '../api/client'
@@ -12,38 +11,51 @@ export default function FeatureTable({ features, onIgnore }: Props) {
   const nav = useNavigate()
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+    <table className="w-full" style={{ borderCollapse: 'collapse' }}>
       <thead>
-        <tr style={{ borderBottom: '2px solid #E2E8F0', textAlign: 'left' }}>
-          {['Element', 'Screen', 'State', 'Last used', 'Actions'].map(h => (
-            <th key={h} style={{ padding: '10px 12px', color: '#64748B', fontWeight: 600 }}>{h}</th>
+        <tr className="bg-slate-50 border-b border-slate-100">
+          {['Feature', 'Type', 'State', 'Last Used', 'Actions'].map((h) => (
+            <th
+              key={h}
+              className="text-left text-slate-400 font-bold uppercase"
+              style={{ padding: '8px 20px', fontSize: 10, letterSpacing: '0.07em' }}
+            >
+              {h}
+            </th>
           ))}
         </tr>
       </thead>
       <tbody>
-        {features.map(f => (
-          <tr key={f.id} style={{ borderBottom: '1px solid #F1F5F9' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
-            onMouseLeave={e => (e.currentTarget.style.background = '')}>
-            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#334155' }}>
-              {f.resourceName ?? f.elementType}
+        {features.map((f) => (
+          <tr
+            key={f.id}
+            className="border-b border-slate-50 last:border-none cursor-pointer hover:bg-slate-50 transition-colors"
+            onClick={() => nav(`/features/${f.id}`)}
+          >
+            <td style={{ padding: '11px 20px' }}>
+              <div className="font-mono text-slate-800 font-medium" style={{ fontSize: 11.5 }}>
+                {f.resourceName ?? f.elementType}
+              </div>
+              <div className="text-slate-400 mt-0.5" style={{ fontSize: 11 }}>
+                {f.screenName}
+              </div>
             </td>
-            <td style={{ padding: '10px 12px', color: '#64748B' }}>{f.screenName}</td>
-            <td style={{ padding: '10px 12px' }}><StateBadge state={f.state} /></td>
-            <td style={{ padding: '10px 12px', color: '#94A3B8' }}>
+            <td className="text-slate-700" style={{ padding: '11px 20px', fontSize: 12.5 }}>
+              {f.elementType}
+            </td>
+            <td style={{ padding: '11px 20px' }}>
+              <StateBadge state={f.state} />
+            </td>
+            <td className="text-slate-400" style={{ padding: '11px 20px', fontSize: 11.5 }}>
               {f.daysSinceLastUse !== null ? `${f.daysSinceLastUse}d ago` : 'Never'}
             </td>
-            <td style={{ padding: '10px 12px' }}>
-              <button onClick={() => nav(`/features/${f.id}`)}
-                style={{ marginRight: 8, padding: '4px 10px', border: '1px solid #E2E8F0',
-                  borderRadius: 6, cursor: 'pointer', fontSize: 13, background: '#fff' }}>
-                Detail
-              </button>
+            <td style={{ padding: '11px 20px' }} onClick={(e) => e.stopPropagation()}>
               {onIgnore && (
-                <button onClick={() => onIgnore(f.id, !f.isIgnored)}
-                  style={{ padding: '4px 10px', border: '1px solid #E2E8F0',
-                    borderRadius: 6, cursor: 'pointer', fontSize: 13, background: '#fff',
-                    color: f.isIgnored ? '#16A34A' : '#94A3B8' }}>
+                <button
+                  onClick={() => onIgnore(f.id, !f.isIgnored)}
+                  className="border border-slate-200 bg-white rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                  style={{ fontSize: 11, padding: '3px 8px' }}
+                >
                   {f.isIgnored ? 'Unignore' : 'Ignore'}
                 </button>
               )}
@@ -51,7 +63,11 @@ export default function FeatureTable({ features, onIgnore }: Props) {
           </tr>
         ))}
         {features.length === 0 && (
-          <tr><td colSpan={5} style={{ padding: 32, textAlign: 'center', color: '#94A3B8' }}>No features found</td></tr>
+          <tr>
+            <td colSpan={5} className="text-center text-slate-400 py-8" style={{ fontSize: 13 }}>
+              No features found
+            </td>
+          </tr>
         )}
       </tbody>
     </table>
