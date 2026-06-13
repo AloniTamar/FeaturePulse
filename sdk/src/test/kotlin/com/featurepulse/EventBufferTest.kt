@@ -59,6 +59,6 @@ class EventBufferTest {
         }
         threads.forEach { it.start() }
         threads.forEach { it.join() }
-        assertTrue(buf.size() <= 100)
+        assertEquals(100, buf.size())
     }
 }

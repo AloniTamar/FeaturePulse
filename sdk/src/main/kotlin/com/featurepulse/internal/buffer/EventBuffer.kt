@@ -4,6 +4,9 @@ import com.featurepulse.internal.model.RawEvent
 import java.util.ArrayDeque
 
 internal class EventBuffer(private val maxSize: Int = 500) {
+    init {
+        require(maxSize > 0) { "EventBuffer: maxSize must be positive, got $maxSize" }
+    }
 
     private val buffer = ArrayDeque<RawEvent>(maxSize)
 
@@ -27,7 +30,7 @@ internal class EventBuffer(private val maxSize: Int = 500) {
     fun size(): Int = buffer.size
 
     @Synchronized
-    fun isFull(): Boolean = buffer.size >= maxSize
+    fun isFull(): Boolean = buffer.size == maxSize
 
     @Synchronized
     fun clear() = buffer.clear()
