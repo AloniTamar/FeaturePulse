@@ -1,11 +1,9 @@
-// portal/src/pages/Settings.tsx
 import { useState } from 'react'
-import NavBar from '../components/NavBar'
 
 export default function Settings() {
-  const [appId, setAppIdState]   = useState(localStorage.getItem('fp_appId') ?? '')
-  const [apiKey, setApiKeyState] = useState(localStorage.getItem('fp_apiKey') ?? '')
-  const [saved, setSaved]        = useState(false)
+  const [appId,  setAppId]  = useState(localStorage.getItem('fp_appId')  ?? '')
+  const [apiKey, setApiKey] = useState(localStorage.getItem('fp_apiKey') ?? '')
+  const [saved,  setSaved]  = useState(false)
 
   function save(e: React.FormEvent) {
     e.preventDefault()
@@ -15,37 +13,55 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2500)
   }
 
-  return (
-    <>
-      <NavBar />
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: '#0F172A' }}>Settings</h1>
-        <p style={{ color: '#64748B', marginBottom: 28 }}>App ID and API key for this session.</p>
+  const fields = [
+    { label: 'App ID',  value: appId,  set: setAppId,  ph: 'uuid' },
+    { label: 'API Key', value: apiKey, set: setApiKey, ph: 'fp_…' },
+  ]
 
-        <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {[
-            { label: 'App ID',  value: appId,  set: setAppIdState,  ph: 'uuid' },
-            { label: 'API Key', value: apiKey, set: setApiKeyState, ph: 'fp_…' },
-          ].map(({ label, value, set, ph }) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{label}</label>
-              <input value={value} onChange={e => set(e.target.value)} placeholder={ph}
-                style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, fontSize: 14,
-                  fontFamily: 'monospace' }} />
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <h1 className="text-slate-900 font-extrabold mb-1.5" style={{ fontSize: 24, letterSpacing: '-0.5px' }}>
+        Settings
+      </h1>
+      <p className="text-slate-500 mb-7" style={{ fontSize: 13 }}>App ID and API key for this session.</p>
+
+      {/* Credentials form */}
+      <div className="bg-white rounded-card border border-slate-200 p-6 mb-5">
+        <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: 14 }}>Credentials</h2>
+        <form onSubmit={save} className="flex flex-col gap-4">
+          {fields.map(({ label, value, set, ph }) => (
+            <div key={label}>
+              <label className="block text-slate-700 font-semibold mb-1.5" style={{ fontSize: 13 }}>
+                {label}
+              </label>
+              <input
+                value={value}
+                onChange={(e) => set(e.target.value)}
+                placeholder={ph}
+                className="w-full border border-slate-200 rounded-lg text-slate-900 font-mono outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
+                style={{ padding: '10px 14px', fontSize: 13 }}
+              />
             </div>
           ))}
-
-          <button type="submit"
-            style={{ alignSelf: 'flex-start', padding: '10px 20px', background: '#4F46E5',
-              color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
-            {saved ? '✓ Saved' : 'Save'}
-          </button>
+          <div>
+            <button
+              type="submit"
+              className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              style={{ padding: '9px 20px', fontSize: 13 }}
+            >
+              {saved ? '✓ Saved' : 'Save'}
+            </button>
+          </div>
         </form>
+      </div>
 
-        <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #E2E8F0' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0F172A' }}>SDK Integration</h2>
-        <pre style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8,
-          padding: 16, fontSize: 13, overflowX: 'auto', color: '#334155' }}>
+      {/* SDK snippet */}
+      <div className="bg-white rounded-card border border-slate-200 p-6">
+        <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: 14 }}>SDK Integration</h2>
+        <pre
+          className="bg-slate-50 border border-slate-200 rounded-lg text-slate-700 overflow-x-auto font-mono"
+          style={{ padding: 16, fontSize: 12.5, lineHeight: 1.6 }}
+        >
 {`// build.gradle.kts
 implementation("com.github.featurepulse:sdk:1.0.0")
 
@@ -56,6 +72,6 @@ FeaturePulse.init(this, PulseConfig.Builder()
     .build())`}
         </pre>
       </div>
-    </>
+    </div>
   )
 }
