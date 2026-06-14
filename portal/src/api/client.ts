@@ -59,6 +59,9 @@ export const api = {
   ignoreFeature: (featureId: string, ignore: boolean) =>
     request<Feature>(`/features/${featureId}/ignore`, { method: 'PATCH', body: JSON.stringify({ ignore }) }),
 
+  getTrend: (appId: string, days = 30) =>
+    request<TrendPoint[]>(`/apps/${appId}/trend?days=${days}`),
+
   getDeadFeatures: (appId: string) =>
     request<Feature[]>(`/apps/${appId}/dead`),
 
@@ -79,3 +82,5 @@ export interface TimelineRow {
 }
 
 export interface Pagination { page: number; limit: number; total: number }
+
+export interface TrendPoint { date: string; avgInteractionRate: number }

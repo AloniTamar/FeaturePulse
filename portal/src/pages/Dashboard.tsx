@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { Feature } from '../api/client'
+import type { Feature, TrendPoint } from '../api/client'
 import StatCard from '../components/StatCard'
 import StateBadge from '../components/StateBadge'
 import LineChart from '../components/LineChart'
@@ -11,18 +11,6 @@ import { useTopbar } from '../components/TopbarContext'
 import { COLORS } from '../design-tokens'
 
 const APP_ID = localStorage.getItem('fp_appId') ?? ''
-
-const N = 30
-const PLACEHOLDER_LABELS = Array.from({ length: N }, (_, i) => {
-  const d = new Date()
-  d.setDate(d.getDate() - (N - 1 - i))
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-})
-const PLACEHOLDER_DATA: Record<string, number[]> = {
-  all:      [22,24,23,25,24,22,21,23,22,21,20,21,19,20,18,19,17,18,16,17,15,16,14,15,13,14,12,13,11,12],
-  dead:     [2,2,2,1,2,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  declining:[18,19,18,20,19,17,16,18,17,16,14,15,13,12,11,10,9,10,8,7,6,7,5,6,4,5,3,4,2,3],
-}
 
 interface RecentTransition {
   id: number; oldState: string; newState: string; changedAt: string
@@ -82,7 +70,7 @@ export default function Dashboard() {
   const { setActions } = useTopbar()
   const [data, setData]         = useState<DashboardData | null>(null)
   const [deadFeatures, setDead] = useState<Feature[]>([])
-  const [lineTab, setLineTab]   = useState<'all' | 'dead' | 'declining'>('all')
+  const [trend, setTrend]       = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] })
   const [error, setError]       = useState('')
 
   useEffect(() => {
@@ -92,9 +80,29 @@ export default function Dashboard() {
       api.getDashboard(APP_ID),
       api.getFeatures(APP_ID, { state: 'DEAD', page: '1', limit: '8' })
         .catch(() => ({ data: [] as Feature[], pagination: { page: 1, limit: 8, total: 0 } })),
-    ]).then(([d, dead]) => {
+      api.getTrend(APP_ID, 30)
+        .catch(() => [] as TrendPoint[]),
+    ]).then(([d, dead, trendRows]) => {
       setData(d as DashboardData)
       setDead(dead.data)
+      if (trendRows.length > 0) {
+        setTrend({
+          labels: trendRows.map(r =>
+            new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          ),
+          data: trendRows.map(r => +(r.avgInteractionRate * 100).toFixed(1)),
+        })
+      } else {
+        // No aggregates yet — flat zero line so the chart renders without crashing
+        const N = 30
+        setTrend({
+          labels: Array.from({ length: N }, (_, i) => {
+            const d = new Date(); d.setDate(d.getDate() - (N - 1 - i))
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          }),
+          data: Array(N).fill(0),
+        })
+      }
     }).catch((e) => setError(e.message))
 
     setActions(
@@ -155,8 +163,6 @@ export default function Dashboard() {
     { label: 'Dormant',   value: counts['DORMANT']   ?? 0, color: COLORS.slate300 },
   ]
 
-  const lineColor = lineTab === 'all' ? COLORS.indigo : lineTab === 'dead' ? COLORS.red : COLORS.yellow
-
   return (
     <div>
       {/* Page header */}
@@ -211,32 +217,14 @@ export default function Dashboard() {
       <div className="grid gap-3.5 mb-5" style={{ gridTemplateColumns: '2fr 1fr' }}>
         {/* Line chart */}
         <div className="bg-white rounded-card border border-slate-200">
-          <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100">
-            <div>
-              <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Interaction Rate — Last 30 Days</p>
-              <p className="text-slate-400 mt-0.5" style={{ fontSize: 11.5 }}>
-                Average % of sessions where each feature was interacted with
-              </p>
-            </div>
-            <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
-              {(['all', 'dead', 'declining'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setLineTab(tab)}
-                  className={`px-2.5 py-1 rounded transition-colors ${
-                    lineTab === tab
-                      ? 'bg-white text-slate-900 font-semibold shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 font-medium'
-                  }`}
-                  style={{ fontSize: 11.5 }}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
+          <div className="px-5 py-4 border-b border-slate-100">
+            <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Interaction Rate — Last 30 Days</p>
+            <p className="text-slate-400 mt-0.5" style={{ fontSize: 11.5 }}>
+              Average % of sessions where each feature was interacted with
+            </p>
           </div>
           <div className="p-5">
-            <LineChart labels={PLACEHOLDER_LABELS} data={PLACEHOLDER_DATA[lineTab]} color={lineColor} height={196} />
+            <LineChart labels={trend.labels} data={trend.data} color={COLORS.indigo} height={196} />
           </div>
         </div>
 

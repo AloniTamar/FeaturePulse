@@ -56,3 +56,23 @@ dashboardRouter.get('/apps/:appId/declining', jwtAuth, async (req, res) => {
     res.status(503).json({ error: 'Service unavailable' })
   }
 })
+
+// GET /api/v1/apps/:appId/trend?days=30
+dashboardRouter.get('/apps/:appId/trend', jwtAuth, async (req, res) => {
+  const days = parseInt((req.query.days as string) ?? '30')
+  const since = new Date(Date.now() - days * 86_400_000)
+  try {
+    const rows = await prisma.dailyAggregate.groupBy({
+      by: ['date'],
+      where: { feature: { appId: req.params.appId }, date: { gte: since } },
+      _avg: { interactionRate: true },
+      orderBy: { date: 'asc' },
+    })
+    res.json(rows.map(r => ({
+      date: r.date,
+      avgInteractionRate: +(r._avg.interactionRate ?? 0).toFixed(4),
+    })))
+  } catch {
+    res.status(503).json({ error: 'Service unavailable' })
+  }
+})
