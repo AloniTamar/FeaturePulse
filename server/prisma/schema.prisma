@@ -12,25 +12,27 @@ model User {
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+  apps         App[]
 }
 
 model App {
-  id           String   @id @default(uuid())
-  name         String
-  packageName  String
-  apiKey       String   @unique
-  apiKeyHash   String
-  ownerEmail   String
-  createdAt    DateTime @default(now())
-  config       Json     @default("{}")
-  features     Feature[]
-  rawEvents    RawEvent[]
+  id          String   @id @default(uuid())
+  name        String
+  packageName String
+  apiKey      String   @unique
+  apiKeyHash  String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  config      Json     @default("{}")
+  features    Feature[]
+  rawEvents   RawEvent[]
 }
 
 model Feature {
   id               String    @id
   appId            String
-  app              App       @relation(fields: [appId], references: [id])
+  app              App       @relation(fields: [appId], references: [id], onDelete: Cascade)
   elementType      String
   resourceName     String?
   screenName       String
@@ -51,7 +53,7 @@ model RawEvent {
   id        String   @id
   featureId String
   appId     String
-  app       App      @relation(fields: [appId], references: [id])
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
   eventType String
   timestamp DateTime
   sessionId String?
@@ -68,7 +70,7 @@ model DailyAggregate {
   interactions    Int      @default(0)
   uniqueUsers     Int      @default(0)
   interactionRate Float    @default(0.0)
-  feature         Feature  @relation(fields: [featureId], references: [id])
+  feature         Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
 
   @@id([featureId, date])
   @@index([date])
@@ -77,7 +79,7 @@ model DailyAggregate {
 model StateTransition {
   id        Int      @id @default(autoincrement())
   featureId String
-  feature   Feature  @relation(fields: [featureId], references: [id])
+  feature   Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
   oldState  String?
   newState  String
   changedAt DateTime @default(now())

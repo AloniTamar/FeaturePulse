@@ -12,10 +12,15 @@ beforeAll(async () => {
   await prisma.dailyAggregate.deleteMany()
   await prisma.feature.deleteMany()
   await prisma.app.deleteMany()
+  await prisma.user.deleteMany()
+  const testUser = await prisma.user.create({
+    data: { email: 'route@test.com', passwordHash: 'x' },
+  })
   const testApp = await prisma.app.create({
     data: {
       name: 'RouteTest', packageName: 'com.routetest',
-      apiKey: 'fp_route_key', apiKeyHash: 'fp_route_key', ownerEmail: 'route@test.com',
+      apiKey: 'fp_route_key', apiKeyHash: 'fp_route_key',
+      userId: testUser.id,
     },
   })
   testApiKey = testApp.apiKey

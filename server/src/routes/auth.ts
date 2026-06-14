@@ -34,7 +34,7 @@ authRouter.post('/register', async (req, res) => {
 
   const apiKey = 'fp_' + crypto.randomBytes(24).toString('hex')
   const app = await prisma.app.create({
-    data: { name: appName, packageName, apiKey, apiKeyHash: apiKey, ownerEmail: email },
+    data: { name: appName, packageName, apiKey, apiKeyHash: apiKey, userId: user.id },
   })
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
@@ -55,7 +55,7 @@ authRouter.post('/login', async (req, res) => {
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
 
   const app = await prisma.app.findFirst({
-    where: { ownerEmail: email },
+    where: { userId: user.id },
     orderBy: { createdAt: 'asc' },
   })
   res.json({

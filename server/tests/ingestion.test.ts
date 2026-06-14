@@ -14,10 +14,13 @@ beforeEach(async () => {
 afterAll(async () => { await prisma.$disconnect() })
 
 async function createTestApp() {
+  const user = await prisma.user.create({
+    data: { email: 'test@test.com', passwordHash: 'x' },
+  })
   return prisma.app.create({
     data: {
       name: 'Test', packageName: 'com.test', apiKey: 'fp_test_key',
-      apiKeyHash: 'fp_test_key', ownerEmail: 'test@test.com',
+      apiKeyHash: 'fp_test_key', userId: user.id,
     },
   })
 }
