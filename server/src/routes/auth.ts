@@ -54,7 +54,10 @@ authRouter.post('/login', async (req, res) => {
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
 
-  const app = await prisma.app.findFirst({ where: { ownerEmail: email } })
+  const app = await prisma.app.findFirst({
+    where: { ownerEmail: email },
+    orderBy: { createdAt: 'asc' },
+  })
   res.json({
     token,
     ...(app ? {

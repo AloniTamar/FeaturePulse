@@ -3,7 +3,14 @@ const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 function getToken() { return localStorage.getItem('fp_token') }
 export function setToken(t: string) { localStorage.setItem('fp_token', t) }
-export function clearToken() { localStorage.removeItem('fp_token') }
+export function clearToken() {
+  localStorage.removeItem('fp_token')
+  localStorage.removeItem('fp_appId')
+  localStorage.removeItem('fp_appName')
+  localStorage.removeItem('fp_pkgName')
+  localStorage.removeItem('fp_apiKey')
+  localStorage.removeItem('fp_email')
+}
 export function isLoggedIn() { return !!getToken() }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
