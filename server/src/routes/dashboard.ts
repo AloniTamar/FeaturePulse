@@ -1,14 +1,18 @@
 // server/src/routes/dashboard.ts
 import { Router } from 'express'
 import { prisma } from '../db/client'
-import { jwtAuth } from '../middleware/auth'
+import { jwtAuth, type AuthRequest } from '../middleware/auth'
 
 export const dashboardRouter = Router()
 
 // GET /api/v1/apps/:appId/dashboard — summary counts + recent state changes
-dashboardRouter.get('/apps/:appId/dashboard', jwtAuth, async (req, res) => {
+dashboardRouter.get('/apps/:appId/dashboard', jwtAuth, async (req: AuthRequest, res) => {
   const { appId } = req.params
   try {
+    const app = await prisma.app.findUnique({ where: { id: appId } })
+    if (!app) return res.status(404).json({ error: 'App not found' })
+    if (app.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' })
+
     const [stateCounts, recentTransitions] = await Promise.all([
       prisma.feature.groupBy({ by: ['state'], where: { appId }, _count: true }),
       prisma.stateTransition.findMany({
@@ -32,8 +36,12 @@ dashboardRouter.get('/apps/:appId/dashboard', jwtAuth, async (req, res) => {
 })
 
 // GET /api/v1/apps/:appId/dead
-dashboardRouter.get('/apps/:appId/dead', jwtAuth, async (req, res) => {
+dashboardRouter.get('/apps/:appId/dead', jwtAuth, async (req: AuthRequest, res) => {
   try {
+    const app = await prisma.app.findUnique({ where: { id: req.params.appId } })
+    if (!app) return res.status(404).json({ error: 'App not found' })
+    if (app.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' })
+
     const features = await prisma.feature.findMany({
       where: { appId: req.params.appId, state: 'DEAD', isIgnored: false },
       orderBy: { lastInteraction: 'asc' },
@@ -45,8 +53,12 @@ dashboardRouter.get('/apps/:appId/dead', jwtAuth, async (req, res) => {
 })
 
 // GET /api/v1/apps/:appId/declining
-dashboardRouter.get('/apps/:appId/declining', jwtAuth, async (req, res) => {
+dashboardRouter.get('/apps/:appId/declining', jwtAuth, async (req: AuthRequest, res) => {
   try {
+    const app = await prisma.app.findUnique({ where: { id: req.params.appId } })
+    if (!app) return res.status(404).json({ error: 'App not found' })
+    if (app.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' })
+
     const features = await prisma.feature.findMany({
       where: { appId: req.params.appId, state: 'DECLINING', isIgnored: false },
       orderBy: { lastInteraction: 'desc' },
@@ -58,10 +70,14 @@ dashboardRouter.get('/apps/:appId/declining', jwtAuth, async (req, res) => {
 })
 
 // GET /api/v1/apps/:appId/trend?days=30
-dashboardRouter.get('/apps/:appId/trend', jwtAuth, async (req, res) => {
+dashboardRouter.get('/apps/:appId/trend', jwtAuth, async (req: AuthRequest, res) => {
   const days = Math.max(1, Math.min(365, parseInt((req.query.days as string) ?? '30', 10) || 30))
   const since = new Date(Date.now() - days * 86_400_000)
   try {
+    const app = await prisma.app.findUnique({ where: { id: req.params.appId } })
+    if (!app) return res.status(404).json({ error: 'App not found' })
+    if (app.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' })
+
     const rows = await prisma.dailyAggregate.groupBy({
       by: ['date'],
       where: { feature: { appId: req.params.appId }, date: { gte: since } },

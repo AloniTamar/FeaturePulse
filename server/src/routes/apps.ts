@@ -1,30 +1,19 @@
-// server/src/routes/apps.ts
 import { Router } from 'express'
 import { prisma } from '../db/client'
 import { jwtAuth, type AuthRequest } from '../middleware/auth'
-import { z } from 'zod'
 import crypto from 'crypto'
+import { z } from 'zod'
 
 export const appsRouter = Router()
 
-const CreateAppSchema = z.object({
-  name: z.string().min(1),
-  packageName: z.string().min(1),
-})
+async function requireOwnership(req: AuthRequest, res: any, appId: string) {
+  const app = await prisma.app.findUnique({ where: { id: appId } })
+  if (!app) { res.status(404).json({ error: 'App not found' }); return null }
+  if (app.userId !== req.userId) { res.status(403).json({ error: 'Forbidden' }); return null }
+  return app
+}
 
-appsRouter.post('/', jwtAuth, async (req: AuthRequest, res) => {
-  const result = CreateAppSchema.safeParse(req.body)
-  if (!result.success) return res.status(400).json({ error: result.error.flatten() })
-
-  const { name, packageName } = result.data
-  const apiKey = 'fp_' + crypto.randomBytes(24).toString('hex')
-  const app = await prisma.app.create({
-    data: { name, packageName, apiKey, apiKeyHash: apiKey, userId: req.userId! },
-  })
-  res.status(201).json({ id: app.id, name: app.name, packageName: app.packageName, apiKey: app.apiKey, createdAt: app.createdAt })
-})
-
-// SDK fetches remote config via this (no auth required — public config only)
+// Public — SDK fetches remote config via this (no auth)
 appsRouter.get('/config', async (req, res) => {
   const appId = req.query.appId
   if (typeof appId !== 'string' || !appId) return res.status(400).json({ error: 'appId required' })
@@ -45,30 +34,118 @@ appsRouter.get('/config', async (req, res) => {
   })
 })
 
-appsRouter.get('/', jwtAuth, async (_req, res) => {
-  const apps = await prisma.app.findMany()
-  res.json(apps.map(a => ({ id: a.id, name: a.name, packageName: a.packageName, createdAt: a.createdAt })))
-})
-
-appsRouter.put('/:appId/config', jwtAuth, async (req, res) => {
-  const app = await prisma.app.update({
-    where: { id: req.params.appId },
-    data: { config: req.body },
-  })
-  res.json(app)
-})
-
-// GET /api/v1/apps/:appId/features?state=DEAD&screen=HomeActivity&page=1&limit=20
-appsRouter.get('/:appId/features', jwtAuth, async (req, res) => {
-  const { appId } = req.params
-  const { state, screen, page = '1', limit = '20' } = req.query
-
-  const where: Record<string, unknown> = { appId }
-  if (state)  where.state = state
-  if (screen) where.screenName = screen
-
-  const skip = (parseInt(page as string) - 1) * parseInt(limit as string)
+// GET /api/v1/apps — list authenticated user's apps
+appsRouter.get('/', jwtAuth, async (req: AuthRequest, res) => {
   try {
+    const apps = await prisma.app.findMany({
+      where: { userId: req.userId! },
+      orderBy: { createdAt: 'asc' },
+      include: { _count: { select: { features: true } } },
+    })
+    res.json(apps.map(a => ({
+      id: a.id,
+      name: a.name,
+      packageName: a.packageName,
+      apiKey: a.apiKey,
+      createdAt: a.createdAt,
+      featureCount: a._count.features,
+    })))
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/v1/apps — create new app
+const CreateAppSchema = z.object({
+  name: z.string().min(1),
+  packageName: z.string().min(1),
+})
+
+appsRouter.post('/', jwtAuth, async (req: AuthRequest, res) => {
+  const result = CreateAppSchema.safeParse(req.body)
+  if (!result.success) return res.status(400).json({ error: result.error.flatten() })
+
+  const { name, packageName } = result.data
+  const apiKey = 'fp_' + crypto.randomBytes(24).toString('hex')
+  try {
+    const app = await prisma.app.create({
+      data: { name, packageName, apiKey, apiKeyHash: apiKey, userId: req.userId! },
+      include: { _count: { select: { features: true } } },
+    })
+    res.status(201).json({
+      id: app.id, name: app.name, packageName: app.packageName,
+      apiKey: app.apiKey, createdAt: app.createdAt, featureCount: app._count.features,
+    })
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /api/v1/apps/:appId — rename
+const RenameSchema = z.object({ name: z.string().min(1) })
+
+appsRouter.patch('/:appId', jwtAuth, async (req: AuthRequest, res) => {
+  try {
+    const owned = await requireOwnership(req, res, req.params.appId)
+    if (!owned) return
+
+    const result = RenameSchema.safeParse(req.body)
+    if (!result.success) return res.status(400).json({ error: result.error.flatten() })
+
+    const updated = await prisma.app.update({
+      where: { id: req.params.appId },
+      data: { name: result.data.name },
+      include: { _count: { select: { features: true } } },
+    })
+    res.json({
+      id: updated.id, name: updated.name, packageName: updated.packageName,
+      apiKey: updated.apiKey, createdAt: updated.createdAt, featureCount: updated._count.features,
+    })
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// DELETE /api/v1/apps/:appId
+appsRouter.delete('/:appId', jwtAuth, async (req: AuthRequest, res) => {
+  try {
+    const owned = await requireOwnership(req, res, req.params.appId)
+    if (!owned) return
+    await prisma.app.delete({ where: { id: req.params.appId } })
+    res.status(204).end()
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PUT /api/v1/apps/:appId/config — SDK remote config update
+appsRouter.put('/:appId/config', jwtAuth, async (req: AuthRequest, res) => {
+  try {
+    const owned = await requireOwnership(req, res, req.params.appId)
+    if (!owned) return
+    const app = await prisma.app.update({
+      where: { id: req.params.appId },
+      data: { config: req.body },
+    })
+    res.json(app)
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/v1/apps/:appId/features
+appsRouter.get('/:appId/features', jwtAuth, async (req: AuthRequest, res) => {
+  try {
+    const owned = await requireOwnership(req, res, req.params.appId)
+    if (!owned) return
+
+    const { appId } = req.params
+    const { state, screen, page = '1', limit = '20' } = req.query
+    const where: Record<string, unknown> = { appId }
+    if (state)  where.state = state
+    if (screen) where.screenName = screen
+
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string)
     const [features, total] = await Promise.all([
       prisma.feature.findMany({ where, skip, take: parseInt(limit as string), orderBy: { lastInteraction: 'desc' } }),
       prisma.feature.count({ where }),
@@ -87,22 +164,18 @@ appsRouter.get('/:appId/features', jwtAuth, async (req, res) => {
   }
 })
 
-// GET /api/v1/apps/:appId/export?format=json|csv
-appsRouter.get('/:appId/export', jwtAuth, async (req, res) => {
+// GET /api/v1/apps/:appId/export
+appsRouter.get('/:appId/export', jwtAuth, async (req: AuthRequest, res) => {
   try {
+    const owned = await requireOwnership(req, res, req.params.appId)
+    if (!owned) return
     const features = await prisma.feature.findMany({ where: { appId: req.params.appId } })
     if ((req.query.format as string) === 'csv') {
       const csvEscape = (val: string) => `"${val.replace(/"/g, '""')}"`
       const header = 'featureId,elementType,resourceName,screenName,state,lastInteraction\n'
       const rows = features.map(f =>
-        [
-          csvEscape(f.id),
-          csvEscape(f.elementType),
-          csvEscape(f.resourceName ?? ''),
-          csvEscape(f.screenName),
-          csvEscape(f.state),
-          csvEscape(f.lastInteraction?.toISOString() ?? ''),
-        ].join(',')
+        [csvEscape(f.id), csvEscape(f.elementType), csvEscape(f.resourceName ?? ''),
+         csvEscape(f.screenName), csvEscape(f.state), csvEscape(f.lastInteraction?.toISOString() ?? '')].join(',')
       ).join('\n')
       res.setHeader('Content-Type', 'text/csv')
       res.setHeader('Content-Disposition', 'attachment; filename="features.csv"')
