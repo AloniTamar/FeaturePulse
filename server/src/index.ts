@@ -7,6 +7,8 @@ import { dashboardRouter } from './routes/dashboard'
 import { appsRouter } from './routes/apps'
 import { authRouter } from './routes/auth'
 import { startCronJobs } from './cron/nightly'
+import { runNightlyAggregation } from './services/aggregation'
+import { jwtAuth } from './middleware/auth'
 
 const app = express()
 
@@ -14,6 +16,15 @@ app.use(cors({ origin: process.env.CORS_ORIGIN ?? '*' }))
 app.use(express.json({ limit: '2mb' }))
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
+
+app.post('/api/v1/cron', jwtAuth, async (_req, res) => {
+  try {
+    await runNightlyAggregation()
+    res.json({ ok: true, message: 'Aggregation complete' })
+  } catch (err) {
+    res.status(500).json({ error: 'Cron job failed' })
+  }
+})
 
 app.use('/api/v1/auth',     authRouter)
 app.use('/api/v1/apps',     appsRouter)

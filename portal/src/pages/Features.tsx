@@ -32,15 +32,26 @@ export default function Features() {
   useEffect(() => { load(1) }, [stateFilter])
 
   useEffect(() => {
+    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
     setActions(
-      <a
-        href={api.exportFeatures(APP_ID, 'csv')}
-        download
-        className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold rounded-lg transition-colors no-underline"
+      <button
+        onClick={async () => {
+          const token = localStorage.getItem('fp_token')
+          const res = await fetch(`${BASE}/api/v1/apps/${APP_ID}/export?format=csv`, {
+            headers: { Authorization: `Bearer ${token ?? ''}` },
+          })
+          if (!res.ok) return
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'features.csv'; a.click()
+          URL.revokeObjectURL(url)
+        }}
+        className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold rounded-lg transition-colors"
         style={{ padding: '6px 13px', fontSize: 12.5 }}
       >
         Export CSV
-      </a>
+      </button>
     )
     return () => setActions(null)
   }, [setActions])

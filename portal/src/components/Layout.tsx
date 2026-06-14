@@ -127,7 +127,7 @@ function Topbar() {
   )
 }
 
-function Sidebar({ deadCount, alertCount }: { deadCount: number; alertCount: number }) {
+function Sidebar({ deadCount }: { deadCount: number }) {
   const nav = useNavigate()
   const appName = localStorage.getItem('fp_appName') ?? 'My App'
   const pkgName = localStorage.getItem('fp_pkgName') ?? 'com.example.app'
@@ -162,7 +162,7 @@ function Sidebar({ deadCount, alertCount }: { deadCount: number; alertCount: num
         </p>
         <NavItem to="/dashboard" label="Dashboard" Icon={HomeIcon} />
         <NavItem to="/features"  label="Features"  Icon={GridIcon}  badgeCount={deadCount}  badgeColor="red" />
-        <NavItem to="/alerts"    label="Alerts"    Icon={BellIcon}  badgeCount={alertCount} badgeColor="amber" />
+        <NavItem to="/alerts"    label="Alerts"    Icon={BellIcon} />
 
         <div className="my-1" style={{ height: 1, background: '#F1F5F9', margin: '4px 0' }} />
 
@@ -223,7 +223,7 @@ function LayoutInner() {
 
   return (
     <div className="flex font-sans" style={{ height: '100vh', overflow: 'hidden', background: '#F8FAFC' }}>
-      <Sidebar deadCount={deadCount} alertCount={0} />
+      <Sidebar deadCount={deadCount} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Topbar />
         <main className="flex-1 overflow-y-auto" style={{ padding: '26px 28px 40px' }}>
