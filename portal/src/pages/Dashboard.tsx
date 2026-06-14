@@ -72,6 +72,30 @@ export default function Dashboard() {
   const [deadFeatures, setDead] = useState<Feature[]>([])
   const [trend, setTrend]       = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] })
   const [error, setError]       = useState('')
+  const [cronState, setCronState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+
+  async function runCron() {
+    if (cronState === 'loading') return
+    setCronState('loading')
+    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+    const token = localStorage.getItem('fp_token')
+    try {
+      const res = await fetch(`${BASE}/api/v1/cron`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token ?? ''}` },
+      })
+      if (!res.ok) throw new Error('failed')
+      setCronState('ok')
+      // Refresh dashboard counts to reflect the new aggregation
+      api.getDashboard(APP_ID)
+        .then((d) => setData(d as DashboardData))
+        .catch(() => {})
+    } catch {
+      setCronState('error')
+    } finally {
+      setTimeout(() => setCronState('idle'), 3000)
+    }
+  }
 
   useEffect(() => {
     if (!APP_ID) { nav('/settings'); return }
@@ -108,17 +132,18 @@ export default function Dashboard() {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={async () => {
-            const token = localStorage.getItem('fp_token')
-            await fetch(`${BASE}/api/v1/cron`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token ?? ''}` },
-            })
-          }}
-          className="border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-semibold rounded-lg transition-colors"
+          onClick={runCron}
+          disabled={cronState === 'loading'}
+          className={`border font-semibold rounded-lg transition-colors ${
+            cronState === 'ok'
+              ? 'border-green-300 bg-green-50 text-green-600'
+              : cronState === 'error'
+              ? 'border-red-300 bg-red-50 text-red-600'
+              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+          }`}
           style={{ padding: '6px 13px', fontSize: 12.5 }}
         >
-          Run Cron Now
+          {cronState === 'loading' ? 'Running…' : cronState === 'ok' ? '✓ Done' : cronState === 'error' ? 'Error' : 'Run Cron Now'}
         </button>
         <button
           onClick={async () => {
@@ -141,7 +166,7 @@ export default function Dashboard() {
       </div>
     )
     return () => setActions(null)
-  }, [nav, setActions])
+  }, [nav, setActions, runCron, cronState])
 
   async function handleIgnore(id: string, ignore: boolean) {
     await api.ignoreFeature(id, ignore)
