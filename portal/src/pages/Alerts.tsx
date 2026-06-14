@@ -1,14 +1,12 @@
-// portal/src/pages/Alerts.tsx
 import { useState } from 'react'
-import NavBar from '../components/NavBar'
 
 const APP_ID = localStorage.getItem('fp_appId') ?? ''
 const BASE   = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export default function Alerts() {
   const [webhookUrl, setWebhookUrl] = useState('')
-  const [saved, setSaved]           = useState(false)
-  const [testing, setTesting]       = useState(false)
+  const [saved,      setSaved]      = useState(false)
+  const [testing,    setTesting]    = useState(false)
   const [testResult, setTestResult] = useState('')
 
   async function save(e: React.FormEvent) {
@@ -38,50 +36,82 @@ export default function Alerts() {
     setTesting(false)
   }
 
-  return (
-    <>
-      <NavBar />
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: '#0F172A' }}>Alerts</h1>
-        <p style={{ color: '#64748B', marginBottom: 28 }}>
-          Get notified when a feature becomes DEAD or DECLINING.
-        </p>
+  const TRIGGERS = [
+    'Feature becomes DEAD',
+    'Feature becomes DECLINING',
+    'Feature resurrects from DEAD',
+  ]
 
-        <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <label style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>
-            Slack / Generic Webhook URL
-          </label>
-          <input
-            type="url"
-            placeholder="https://hooks.slack.com/services/…"
-            value={webhookUrl}
-            onChange={e => setWebhookUrl(e.target.value)}
-            style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, fontSize: 15 }}
-          />
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button type="submit"
-              style={{ padding: '10px 20px', background: '#4F46E5', color: '#fff',
-                border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <h1 className="text-slate-900 font-extrabold mb-1.5" style={{ fontSize: 24, letterSpacing: '-0.5px' }}>
+        Alerts
+      </h1>
+      <p className="text-slate-500 mb-7" style={{ fontSize: 13 }}>
+        Get notified when a feature becomes DEAD or DECLINING.
+      </p>
+
+      {/* Webhook config */}
+      <div className="bg-white rounded-card border border-slate-200 p-6 mb-5">
+        <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: 14 }}>
+          Webhook Configuration
+        </h2>
+        <form onSubmit={save} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1.5" style={{ fontSize: 13 }}>
+              Slack / Generic Webhook URL
+            </label>
+            <input
+              type="url"
+              placeholder="https://hooks.slack.com/services/…"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors font-mono"
+              style={{ padding: '10px 14px', fontSize: 13 }}
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              style={{ padding: '9px 20px', fontSize: 13 }}
+            >
               {saved ? '✓ Saved' : 'Save'}
             </button>
-            <button type="button" onClick={testWebhook} disabled={!webhookUrl || testing}
-              style={{ padding: '10px 20px', background: '#F1F5F9', color: '#334155',
-                border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+            <button
+              type="button"
+              onClick={testWebhook}
+              disabled={!webhookUrl || testing}
+              className="bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              style={{ padding: '9px 20px', fontSize: 13 }}
+            >
               {testing ? 'Sending…' : 'Test webhook'}
             </button>
           </div>
-          {testResult && <p style={{ fontSize: 14, color: testResult.startsWith('✅') ? '#16A34A' : '#DC2626' }}>{testResult}</p>}
+          {testResult && (
+            <p style={{ fontSize: 13, color: testResult.startsWith('✅') ? '#16A34A' : '#DC2626' }}>
+              {testResult}
+            </p>
+          )}
         </form>
-
-        <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #E2E8F0' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, color: '#0F172A' }}>Alert Triggers</h2>
-        {['Feature becomes DEAD', 'Feature becomes DECLINING', 'Feature resurrects from DEAD'].map(label => (
-          <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, cursor: 'pointer' }}>
-            <input type="checkbox" defaultChecked style={{ width: 16, height: 16 }} />
-            <span style={{ fontSize: 14, color: '#334155' }}>{label}</span>
-          </label>
-        ))}
       </div>
-    </>
+
+      {/* Triggers */}
+      <div className="bg-white rounded-card border border-slate-200 p-6">
+        <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: 14 }}>Alert Triggers</h2>
+        <div className="flex flex-col gap-3">
+          {TRIGGERS.map((label) => (
+            <label key={label} className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                defaultChecked
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <span className="text-slate-700" style={{ fontSize: 13 }}>{label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
