@@ -20,26 +20,24 @@ const LoginSchema = z.object({
   password: z.string(),
 })
 
-// In-memory user store for demo; replace with User model in production
-const users = new Map<string, { passwordHash: string; id: string }>()
-
 authRouter.post('/register', async (req, res) => {
   const result = RegisterSchema.safeParse(req.body)
   if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
   const { email, password, appName, packageName } = result.data
-  if (users.has(email)) return res.status(409).json({ error: 'Email already registered' })
 
-  const userId = crypto.randomUUID()
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) return res.status(409).json({ error: 'Email already registered' })
+
   const passwordHash = await bcrypt.hash(password, 10)
-  users.set(email, { passwordHash, id: userId })
+  const user = await prisma.user.create({ data: { email, passwordHash } })
 
   const apiKey = 'fp_' + crypto.randomBytes(24).toString('hex')
   const app = await prisma.app.create({
     data: { name: appName, packageName, apiKey, apiKeyHash: apiKey, ownerEmail: email },
   })
 
-  const token = jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: '7d' })
+  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
   res.status(201).json({ token, apiKey: app.apiKey, appId: app.id })
 })
 
@@ -48,7 +46,7 @@ authRouter.post('/login', async (req, res) => {
   if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
   const { email, password } = result.data
-  const user = users.get(email)
+  const user = await prisma.user.findUnique({ where: { email } })
   if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
   const valid = await bcrypt.compare(password, user.passwordHash)
