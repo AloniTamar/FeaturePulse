@@ -1,15 +1,17 @@
-// portal/src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { isLoggedIn } from './api/client'
+import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Features from './pages/Features'
 import FeatureDetail from './pages/FeatureDetail'
 import Alerts from './pages/Alerts'
 import Settings from './pages/Settings'
+import Account from './pages/Account'
+import Docs from './pages/Docs'
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  return isLoggedIn() ? <>{children}</> : <Navigate to="/login" replace />
+function AuthLayout() {
+  return isLoggedIn() ? <Layout /> : <Navigate to="/login" replace />
 }
 
 export default function App() {
@@ -17,11 +19,15 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/features" element={<PrivateRoute><Features /></PrivateRoute>} />
-        <Route path="/features/:featureId" element={<PrivateRoute><FeatureDetail /></PrivateRoute>} />
-        <Route path="/alerts" element={<PrivateRoute><Alerts /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+        <Route element={<AuthLayout />}>
+          <Route path="/dashboard"           element={<Dashboard />} />
+          <Route path="/features"            element={<Features />} />
+          <Route path="/features/:featureId" element={<FeatureDetail />} />
+          <Route path="/alerts"              element={<Alerts />} />
+          <Route path="/settings"            element={<Settings />} />
+          <Route path="/account"             element={<Account />} />
+          <Route path="/docs"                element={<Docs />} />
+        </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
