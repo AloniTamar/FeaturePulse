@@ -3,9 +3,12 @@ import { ingestBatch, BatchPayload } from '../src/services/ingestion'
 import { prisma } from '../src/db/client'
 
 beforeEach(async () => {
+  await prisma.stateTransition.deleteMany()
+  await prisma.dailyAggregate.deleteMany()
   await prisma.rawEvent.deleteMany()
   await prisma.feature.deleteMany()
   await prisma.app.deleteMany()
+  await prisma.user.deleteMany()
 })
 
 afterAll(async () => { await prisma.$disconnect() })
