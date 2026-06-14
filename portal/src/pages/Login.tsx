@@ -7,8 +7,6 @@ export default function Login() {
   const [tab,      setTab]    = useState<'login' | 'register'>('login')
   const [email,    setEmail]  = useState('')
   const [password, setPass]   = useState('')
-  const [appName,  setApp]    = useState('')
-  const [pkgName,  setPkg]    = useState('')
   const [error,    setError]  = useState('')
   const [loading,  setLoading] = useState(false)
 
@@ -18,23 +16,20 @@ export default function Login() {
     setLoading(true)
     try {
       if (tab === 'login') {
-        const { token, appId, appName, pkgName, apiKey } = await api.login(email, password)
+        const { token, apps } = await api.login(email, password)
         setToken(token)
         localStorage.setItem('fp_email', email)
-        if (appId)   localStorage.setItem('fp_appId',   appId)
-        if (appName) localStorage.setItem('fp_appName', appName)
-        if (pkgName) localStorage.setItem('fp_pkgName', pkgName)
-        if (apiKey)  localStorage.setItem('fp_apiKey',  apiKey)
+        if (apps.length > 0) {
+          nav(`/apps/${apps[0].id}/dashboard`)
+        } else {
+          nav('/apps')
+        }
       } else {
-        const { token, appId, apiKey } = await api.register(email, password, appName, pkgName)
+        const { token } = await api.register(email, password)
         setToken(token)
-        localStorage.setItem('fp_appId',   appId)
-        localStorage.setItem('fp_apiKey',  apiKey)
-        localStorage.setItem('fp_appName', appName)
-        localStorage.setItem('fp_pkgName', pkgName)
-        localStorage.setItem('fp_email',   email)
+        localStorage.setItem('fp_email', email)
+        nav('/apps')
       }
-      nav('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -68,9 +63,7 @@ export default function Login() {
               key={t}
               onClick={() => setTab(t)}
               className={`flex-1 py-2 rounded font-semibold transition-colors ${
-                tab === t
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
+                tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
               style={{ fontSize: 13 }}
             >
@@ -81,47 +74,20 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            type="email" placeholder="Email" value={email}
+            onChange={(e) => setEmail(e.target.value)} required
             className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
             style={{ padding: '10px 14px', fontSize: 14 }}
           />
           <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPass(e.target.value)}
-            required
+            type="password" placeholder="Password" value={password}
+            onChange={(e) => setPass(e.target.value)} required
             className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
             style={{ padding: '10px 14px', fontSize: 14 }}
           />
-          {tab === 'register' && (
-            <>
-              <input
-                placeholder="App name"
-                value={appName}
-                onChange={(e) => setApp(e.target.value)}
-                required
-                className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
-                style={{ padding: '10px 14px', fontSize: 14 }}
-              />
-              <input
-                placeholder="Package name (com.example.app)"
-                value={pkgName}
-                onChange={(e) => setPkg(e.target.value)}
-                required
-                className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors font-mono"
-                style={{ padding: '10px 14px', fontSize: 13 }}
-              />
-            </>
-          )}
           {error && <p className="text-red-600" style={{ fontSize: 13 }}>{error}</p>}
           <button
-            type="submit"
-            disabled={loading}
+            type="submit" disabled={loading}
             className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
             style={{ padding: '10px 0', fontSize: 14 }}
           >

@@ -8,6 +8,7 @@ import FeatureDetail from './pages/FeatureDetail'
 import Alerts from './pages/Alerts'
 import Settings from './pages/Settings'
 import Account from './pages/Account'
+import Apps from './pages/Apps'
 import Docs from './pages/Docs'
 
 function AuthLayout() {
@@ -20,15 +21,20 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<AuthLayout />}>
-          <Route path="/dashboard"           element={<Dashboard />} />
-          <Route path="/features"            element={<Features />} />
-          <Route path="/features/:featureId" element={<FeatureDetail />} />
-          <Route path="/alerts"              element={<Alerts />} />
-          <Route path="/settings"            element={<Settings />} />
-          <Route path="/account"             element={<Account />} />
-          <Route path="/docs"                element={<Docs />} />
+          {/* User-level routes — no appId */}
+          <Route path="/apps" element={<Apps />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/docs" element={<Docs />} />
+          {/* App-level routes — appId in URL */}
+          <Route path="/apps/:appId">
+            <Route path="dashboard"              element={<Dashboard />} />
+            <Route path="features"               element={<Features />} />
+            <Route path="features/:featureId"    element={<FeatureDetail />} />
+            <Route path="alerts"                 element={<Alerts />} />
+            <Route path="settings"               element={<Settings />} />
+          </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/apps" replace />} />
       </Routes>
     </BrowserRouter>
   )
