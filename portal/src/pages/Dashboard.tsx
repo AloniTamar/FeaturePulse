@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Feature, TrendPoint } from '../api/client'
@@ -74,7 +74,14 @@ export default function Dashboard() {
   const [error, setError]       = useState('')
   const [cronState, setCronState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
 
-  async function runCron() {
+  // Track mount status to avoid setState after unmount in the cron timer
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  const runCron = useCallback(async () => {
     if (cronState === 'loading') return
     setCronState('loading')
     const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -93,13 +100,13 @@ export default function Dashboard() {
     } catch {
       setCronState('error')
     } finally {
-      setTimeout(() => setCronState('idle'), 3000)
+      setTimeout(() => { if (mountedRef.current) setCronState('idle') }, 3000)
     }
-  }
+  }, [cronState])
 
+  // Effect 1: load data once on mount
   useEffect(() => {
     if (!APP_ID) { nav('/settings'); return }
-    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
     Promise.all([
       api.getDashboard(APP_ID),
       api.getFeatures(APP_ID, { state: 'DEAD', page: '1', limit: '8' })
@@ -128,7 +135,11 @@ export default function Dashboard() {
         })
       }
     }).catch((e) => setError(e.message))
+  }, [nav])
 
+  // Effect 2: register topbar actions; re-runs only when cronState or runCron changes
+  useEffect(() => {
+    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
     setActions(
       <div className="flex items-center gap-2">
         <button
