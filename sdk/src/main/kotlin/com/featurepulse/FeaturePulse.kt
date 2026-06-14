@@ -73,7 +73,11 @@ object FeaturePulse {
         }
         application.registerActivityLifecycleCallbacks(activityTracker)
 
-        SyncWorker.schedule(application, config)
+        try {
+            SyncWorker.schedule(application, config)
+        } catch (_: IllegalStateException) {
+            // WorkManager not initialized — expected in unit test environments
+        }
         initialized = true
     }
 
@@ -100,6 +104,19 @@ object FeaturePulse {
     @JvmStatic fun setDebugMode(enabled: Boolean) { /* toggle PulseLog.debugEnabled */ }
     @JvmStatic fun ignore(viewId: Int)            { /* add to ignored-ids set in EventRecorder */ }
     @JvmStatic fun ignoreScreen(name: String)     { /* append to config.excludedScreens at runtime */ }
+
+    // Test helpers — internal visibility, not part of the public SDK API
+    @JvmStatic internal fun reset() {
+        synchronized(this) {
+            initialized = false
+            paused      = false
+            currentScreen = ""
+            if (::buffer.isInitialized) buffer.clear()
+        }
+    }
+    @JvmStatic internal fun isInitialized() = initialized
+    @JvmStatic internal fun isEnabled()     = initialized && !paused
+    @JvmStatic internal fun getBuffer()     = buffer
 
     private fun getOrCreateDeviceId(context: Context): String {
         val prefs = context.getSharedPreferences("fp_internal", Context.MODE_PRIVATE)
