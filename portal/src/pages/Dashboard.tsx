@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Feature, TrendPoint } from '../api/client'
 import StatCard from '../components/StatCard'
@@ -9,8 +9,6 @@ import DonutChart from '../components/DonutChart'
 import DeadFeaturesList from '../components/DeadFeaturesList'
 import { useTopbar } from '../components/TopbarContext'
 import { COLORS } from '../design-tokens'
-
-const APP_ID = localStorage.getItem('fp_appId') ?? ''
 
 interface RecentTransition {
   id: number; oldState: string; newState: string; changedAt: string
@@ -66,6 +64,7 @@ function ThrivSvg() {
 }
 
 export default function Dashboard() {
+  const { appId = '' } = useParams<{ appId: string }>()
   const nav = useNavigate()
   const { setActions } = useTopbar()
   const [data, setData]         = useState<DashboardData | null>(null)
@@ -94,11 +93,11 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('failed')
       setCronState('ok')
       // Refresh dashboard counts to reflect the new aggregation
-      api.getDashboard(APP_ID)
+      api.getDashboard(appId)
         .then((d) => setData(d as DashboardData))
         .catch(() => {})
       // Refresh trend chart — cron generates new DailyAggregate rows
-      api.getTrend(APP_ID, 30)
+      api.getTrend(appId, 30)
         .then((trendRows) => {
           if (trendRows.length > 0) {
             setTrend({
@@ -115,16 +114,16 @@ export default function Dashboard() {
     } finally {
       setTimeout(() => { if (mountedRef.current) setCronState('idle') }, 3000)
     }
-  }, [cronState])
+  }, [cronState, appId])
 
   // Effect 1: load data once on mount
   useEffect(() => {
-    if (!APP_ID) { nav('/settings'); return }
+    if (!appId) { nav('/apps'); return }
     Promise.all([
-      api.getDashboard(APP_ID),
-      api.getFeatures(APP_ID, { state: 'DEAD', page: '1', limit: '8' })
+      api.getDashboard(appId),
+      api.getFeatures(appId, { state: 'DEAD', page: '1', limit: '8' })
         .catch(() => ({ data: [] as Feature[], pagination: { page: 1, limit: 8, total: 0 } })),
-      api.getTrend(APP_ID, 30)
+      api.getTrend(appId, 30)
         .catch(() => [] as TrendPoint[]),
     ]).then(([d, dead, trendRows]) => {
       setData(d as DashboardData)
@@ -148,7 +147,7 @@ export default function Dashboard() {
         })
       }
     }).catch((e) => setError(e.message))
-  }, [nav])
+  }, [nav, appId])
 
   // Effect 2: register topbar actions; re-runs only when cronState or runCron changes
   useEffect(() => {
@@ -172,7 +171,7 @@ export default function Dashboard() {
         <button
           onClick={async () => {
             const token = localStorage.getItem('fp_token')
-            const res = await fetch(`${BASE}/api/v1/apps/${APP_ID}/export?format=csv`, {
+            const res = await fetch(`${BASE}/api/v1/apps/${appId}/export?format=csv`, {
               headers: { Authorization: `Bearer ${token ?? ''}` },
             })
             if (!res.ok) return
@@ -190,7 +189,7 @@ export default function Dashboard() {
       </div>
     )
     return () => setActions(null)
-  }, [nav, setActions, runCron, cronState])
+  }, [nav, setActions, runCron, cronState, appId])
 
   async function handleIgnore(id: string, ignore: boolean) {
     await api.ignoreFeature(id, ignore)
@@ -221,7 +220,7 @@ export default function Dashboard() {
             Feature Health
           </h1>
           <p className="text-slate-500 mb-1.5" style={{ fontSize: 13 }}>
-            {localStorage.getItem('fp_appName') ?? 'My App'} · {APP_ID} · {counts['TOTAL'] ?? 0} features tracked
+            {counts['TOTAL'] ?? 0} features tracked
           </p>
           <div className="flex items-center gap-2">
             <span className="text-slate-500" style={{ fontSize: 12 }}>Health score</span>
@@ -310,7 +309,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-card border border-slate-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Recent State Changes</p>
-            <Link to="/features" className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
+            <Link to={`/apps/${appId}/features`} className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
               View all transitions
             </Link>
           </div>
@@ -361,7 +360,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-card border border-slate-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Dead Features</p>
-            <Link to="/features" className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
+            <Link to={`/apps/${appId}/features`} className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
               Manage all
             </Link>
           </div>

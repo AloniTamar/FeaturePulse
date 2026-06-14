@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import FeatureTable from '../components/FeatureTable'
 import { useTopbar } from '../components/TopbarContext'
 import type { Feature, Pagination } from '../api/client'
 
-const APP_ID = localStorage.getItem('fp_appId') ?? ''
 const STATES = ['', 'THRIVING', 'DECLINING', 'DORMANT', 'DEAD'] as const
 
 export default function Features() {
+  const { appId = '' } = useParams<{ appId: string }>()
   const { setActions } = useTopbar()
   const [features, setFeatures]       = useState<Feature[]>([])
   const [pagination, setPagination]   = useState<Pagination>({ page: 1, limit: 20, total: 0 })
@@ -19,7 +20,7 @@ export default function Features() {
     try {
       const params: Record<string, string> = { page: String(page), limit: '20' }
       if (stateFilter) params['state'] = stateFilter
-      const res = await api.getFeatures(APP_ID, params)
+      const res = await api.getFeatures(appId, params)
       setFeatures(res.data)
       setPagination(res.pagination)
     } catch {
@@ -29,7 +30,7 @@ export default function Features() {
     }
   }
 
-  useEffect(() => { load(1) }, [stateFilter])
+  useEffect(() => { load(1) }, [stateFilter, appId])
 
   useEffect(() => {
     const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -37,7 +38,7 @@ export default function Features() {
       <button
         onClick={async () => {
           const token = localStorage.getItem('fp_token')
-          const res = await fetch(`${BASE}/api/v1/apps/${APP_ID}/export?format=csv`, {
+          const res = await fetch(`${BASE}/api/v1/apps/${appId}/export?format=csv`, {
             headers: { Authorization: `Bearer ${token ?? ''}` },
           })
           if (!res.ok) return
@@ -54,7 +55,7 @@ export default function Features() {
       </button>
     )
     return () => setActions(null)
-  }, [setActions])
+  }, [setActions, appId])
 
   async function handleIgnore(id: string, ignore: boolean) {
     await api.ignoreFeature(id, ignore)
