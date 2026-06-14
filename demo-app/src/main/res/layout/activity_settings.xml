@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+
+    <!-- ACTIVE -->
+    <Button android:id="@+id/btn_notifications"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Notification Settings" android:layout_marginBottom="8dp"/>
+
+    <!-- DEAD: beta program, closed 18 months ago -->
+    <Button android:id="@+id/btn_join_beta"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Join Beta Program (closed)" android:layout_marginBottom="8dp"/>
+
+    <!-- SDK debug flush button -->
+    <Button android:id="@+id/btn_flush_sdk"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="[DEBUG] Flush FeaturePulse"/>
+</LinearLayout>

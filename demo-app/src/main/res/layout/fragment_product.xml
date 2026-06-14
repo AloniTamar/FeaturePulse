@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+
+    <!-- ACTIVE -->
+    <Button android:id="@+id/btn_add_to_cart"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Add to Cart" android:layout_marginBottom="8dp"/>
+
+    <Button android:id="@+id/btn_buy_now"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Buy Now" android:layout_marginBottom="8dp"/>
+
+    <!-- DEAD: coupon input, collapsed and forgotten -->
+    <EditText android:id="@+id/et_coupon_code"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="Coupon code (legacy)" android:visibility="visible"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- DEAD: AR view button, never worked on most devices -->
+    <Button android:id="@+id/btn_view_ar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="View in AR"/>
+</LinearLayout>
