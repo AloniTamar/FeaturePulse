@@ -209,8 +209,7 @@ function Sidebar({ deadCount, alertCount }: { deadCount: number; alertCount: num
 }
 
 function LayoutInner() {
-  const [deadCount,  setDeadCount]  = useState(0)
-  const [alertCount, setAlertCount] = useState(0)
+  const [deadCount, setDeadCount] = useState(0)
 
   useEffect(() => {
     const appId = localStorage.getItem('fp_appId')
@@ -224,7 +223,7 @@ function LayoutInner() {
 
   return (
     <div className="flex font-sans" style={{ height: '100vh', overflow: 'hidden', background: '#F8FAFC' }}>
-      <Sidebar deadCount={deadCount} alertCount={alertCount} />
+      <Sidebar deadCount={deadCount} alertCount={0} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Topbar />
         <main className="flex-1 overflow-y-auto" style={{ padding: '26px 28px 40px' }}>

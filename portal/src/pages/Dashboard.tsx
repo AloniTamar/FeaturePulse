@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Feature } from '../api/client'
 import StatCard from '../components/StatCard'
@@ -263,9 +263,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-card border border-slate-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Recent State Changes</p>
-            <a href="/features" className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
+            <Link to="/features" className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
               View all transitions
-            </a>
+            </Link>
           </div>
           <table className="w-full" style={{ borderCollapse: 'collapse' }}>
             <thead>
@@ -314,9 +314,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-card border border-slate-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Dead Features</p>
-            <a href="/features" className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
+            <Link to="/features" className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
               Manage all
-            </a>
+            </Link>
           </div>
           <DeadFeaturesList features={deadFeatures} onIgnore={handleIgnore} />
         </div>
