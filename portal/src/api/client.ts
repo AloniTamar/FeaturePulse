@@ -1,14 +1,9 @@
-// portal/src/api/client.ts
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 function getToken() { return localStorage.getItem('fp_token') }
 export function setToken(t: string) { localStorage.setItem('fp_token', t) }
 export function clearToken() {
   localStorage.removeItem('fp_token')
-  localStorage.removeItem('fp_appId')
-  localStorage.removeItem('fp_appName')
-  localStorage.removeItem('fp_pkgName')
-  localStorage.removeItem('fp_apiKey')
   localStorage.removeItem('fp_email')
 }
 export function isLoggedIn() { return !!getToken() }
@@ -27,20 +22,38 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error ?? `HTTP ${res.status}`)
   }
+  if (res.status === 204) return undefined as T
   return res.json()
 }
 
 export const api = {
   login: (email: string, password: string) =>
-    request<{
-      token: string
-      appId?: string; appName?: string; pkgName?: string; apiKey?: string
-    }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-
-  register: (email: string, password: string, appName: string, packageName: string) =>
-    request<{ token: string; apiKey: string; appId: string }>('/auth/register', {
-      method: 'POST', body: JSON.stringify({ email, password, appName, packageName }),
+    request<{ token: string; apps: AppSummary[] }>('/auth/login', {
+      method: 'POST', body: JSON.stringify({ email, password }),
     }),
+
+  register: (email: string, password: string) =>
+    request<{ token: string }>('/auth/register', {
+      method: 'POST', body: JSON.stringify({ email, password }),
+    }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>('/auth/me/password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+
+  deleteAccount: () =>
+    request<void>('/auth/me', { method: 'DELETE' }),
+
+  listApps: () =>
+    request<AppSummary[]>('/apps'),
+
+  createApp: (name: string, packageName: string) =>
+    request<AppSummary>('/apps', { method: 'POST', body: JSON.stringify({ name, packageName }) }),
+
+  renameApp: (appId: string, name: string) =>
+    request<AppSummary>(`/apps/${appId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+
+  deleteApp: (appId: string) =>
+    request<void>(`/apps/${appId}`, { method: 'DELETE' }),
 
   getDashboard: (appId: string) =>
     request<{ counts: Record<string, number>; recentTransitions: unknown[] }>(`/apps/${appId}/dashboard`),
@@ -69,6 +82,15 @@ export const api = {
     `${BASE}/api/v1/apps/${appId}/export?format=${format}`,
 }
 
+export interface AppSummary {
+  id: string
+  name: string
+  packageName: string
+  apiKey: string
+  createdAt: string
+  featureCount: number
+}
+
 export interface Feature {
   id: string; appId: string; elementType: string; resourceName: string | null
   screenName: string; state: 'THRIVING' | 'DECLINING' | 'DORMANT' | 'DEAD'
@@ -82,5 +104,4 @@ export interface TimelineRow {
 }
 
 export interface Pagination { page: number; limit: number; total: number }
-
 export interface TrendPoint { date: string; avgInteractionRate: number }
