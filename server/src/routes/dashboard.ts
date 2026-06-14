@@ -59,7 +59,7 @@ dashboardRouter.get('/apps/:appId/declining', jwtAuth, async (req, res) => {
 
 // GET /api/v1/apps/:appId/trend?days=30
 dashboardRouter.get('/apps/:appId/trend', jwtAuth, async (req, res) => {
-  const days = parseInt((req.query.days as string) ?? '30')
+  const days = Math.max(1, Math.min(365, parseInt((req.query.days as string) ?? '30', 10) || 30))
   const since = new Date(Date.now() - days * 86_400_000)
   try {
     const rows = await prisma.dailyAggregate.groupBy({
@@ -69,7 +69,7 @@ dashboardRouter.get('/apps/:appId/trend', jwtAuth, async (req, res) => {
       orderBy: { date: 'asc' },
     })
     res.json(rows.map(r => ({
-      date: r.date,
+      date: r.date.toISOString().slice(0, 10),
       avgInteractionRate: +(r._avg.interactionRate ?? 0).toFixed(4),
     })))
   } catch {
