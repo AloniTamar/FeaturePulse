@@ -104,7 +104,6 @@ describe('FeaturePulse full flow', () => {
   it('runNightlyAggregation classifies features correctly', async () => {
     await runNightlyAggregation()
 
-    const featA = await prisma.feature.findFirst({ where: { appId, resourceName: null, screenName: { not: 'HomeActivity' } } })
     const featB = await prisma.feature.findUnique({ where: { id: 'fp_feat_b_dead' } })
 
     expect(featB).not.toBeNull()
