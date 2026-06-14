@@ -95,10 +95,24 @@ function NavItem({
   )
 }
 
-function Topbar() {
+function Topbar({ lastSynced }: { lastSynced: Date | null }) {
   const location = useLocation()
   const { actions } = useTopbar()
   const appName = localStorage.getItem('fp_appName') ?? 'My App'
+  const [, forceRender] = useState(0)
+
+  useEffect(() => {
+    if (!lastSynced) return
+    const id = setInterval(() => forceRender(n => n + 1), 60_000)
+    return () => clearInterval(id)
+  }, [lastSynced])
+
+  function relativeTime(d: Date): string {
+    const mins = Math.floor((Date.now() - d.getTime()) / 60_000)
+    if (mins < 1)   return 'just now'
+    if (mins === 1) return '1 min ago'
+    return `${mins} min ago`
+  }
 
   const pageLabel =
     Object.entries(PAGE_LABELS).find(([path]) =>
@@ -114,13 +128,15 @@ function Topbar() {
       <span className="text-slate-300" style={{ fontSize: 13 }}>/</span>
       <span className="text-slate-700 font-semibold" style={{ fontSize: 13 }}>{pageLabel}</span>
       <div className="ml-auto flex items-center gap-2.5">
-        <div
-          className="flex items-center gap-1.5 bg-green-100 text-green-600 font-medium rounded-full px-3 py-1"
-          style={{ fontSize: 12 }}
-        >
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600 animate-breathe" />
-          Synced 2 min ago
-        </div>
+        {lastSynced && (
+          <div
+            className="flex items-center gap-1.5 bg-green-100 text-green-600 font-medium rounded-full px-3 py-1"
+            style={{ fontSize: 12 }}
+          >
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600 animate-breathe" />
+            Synced {relativeTime(lastSynced)}
+          </div>
+        )}
         {actions}
       </div>
     </div>
@@ -210,6 +226,7 @@ function Sidebar({ deadCount }: { deadCount: number }) {
 
 function LayoutInner() {
   const [deadCount, setDeadCount] = useState(0)
+  const [lastSynced, setLastSynced] = useState<Date | null>(null)
 
   useEffect(() => {
     const appId = localStorage.getItem('fp_appId')
@@ -217,6 +234,7 @@ function LayoutInner() {
     api.getDashboard(appId)
       .then((d) => {
         setDeadCount(d.counts['DEAD'] ?? 0)
+        setLastSynced(new Date())
       })
       .catch(() => {})
   }, [])
@@ -225,7 +243,7 @@ function LayoutInner() {
     <div className="flex font-sans" style={{ height: '100vh', overflow: 'hidden', background: '#F8FAFC' }}>
       <Sidebar deadCount={deadCount} />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Topbar />
+        <Topbar lastSynced={lastSynced} />
         <main className="flex-1 overflow-y-auto" style={{ padding: '26px 28px 40px' }}>
           <Outlet />
         </main>
