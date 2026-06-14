@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"tamaraloni11@gmail.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:3000/api/v1/apps/3dce9af7-7021-4546-9f9c-958a6ce14170/features?page=1&limit=20\" -H \"Authorization: Bearer $\\(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"tamaraloni11@gmail.com\",\"password\":\"password123\"}')",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse log --oneline -8)",
+      "Bash(mkdir -p /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/docs/superpowers/specs)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse rev-parse HEAD)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse rm portal/src/components/NavBar.tsx)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse add portal/src/App.tsx)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse commit -m ' *)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse add portal/src/pages/Features.tsx)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse add portal/src/pages/FeatureDetail.tsx)",
+      "Bash(git -C /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse add portal/src/pages/Alerts.tsx)",
+      "Bash(git ls-tree *)",
+      "Bash(npm uninstall *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('server test:', d.get\\('scripts',{}\\).get\\('test','none'\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('portal test:', d.get\\('scripts',{}\\).get\\('test','none'\\)\\)\")",
+      "Bash(mkdir -p /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/demo-app/src/main/res/layout)",
+      "Bash(mkdir -p /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/demo-app/src/main/kotlin/com/featurepulse/demo)",
+      "Bash(./gradlew :demo-app:assembleDebug)",
+      "Bash(./gradlew :sdk:test --tests \"com.featurepulse.FeaturePulseIntegrationTest\")",
+      "Bash(./gradlew :sdk:testDebugUnitTest --tests \"com.featurepulse.FeaturePulseIntegrationTest\")",
+      "Bash(pip3 show *)",
+      "Bash(pip3 install *)",
+      "Bash(git-filter-repo --message-callback ' *)",
+      "Bash(ls ~/.claude/CLAUDE.md 2>/dev/null && echo \"exists\" || echo \"not found\")",
+      "Read(//Users/tamaraloni/.claude/**)",
+      "Bash(claude --version)",
+      "Read(//Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/server/**)",
+      "Bash(cp /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/server/.env /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/.claude/worktrees/multi-app-accounts/server/.env)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:featurepulse123@localhost:5432/featurepulse\" npx jest --forceExit)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:featurepulse123@localhost:5432/featurepulse\" npx jest --testPathPattern=\"routes\" --forceExit)",
+      "Bash(node -e ' *)",
+      "Bash(psql postgresql://postgres:featurepulse123@localhost:5432/featurepulse -c ' *)",
+      "Bash(which psql *)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(\"/Applications/pgAdmin 4.app/Contents/SharedSupport/psql\" --version)",
+      "Bash(\"/Applications/pgAdmin 4.app/Contents/SharedSupport/psql\" \"postgresql://postgres:featurepulse123@localhost:5432/featurepulse\" -c \"SELECT id, name, \\\\\"userId\\\\\" FROM \\\\\"App\\\\\" WHERE \\\\\"userId\\\\\" IS NULL;\")",
+      "Bash(cd /Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/.claire/worktrees/multi-app-accounts/server && npx jest --forceExit 2>&1 | tail -20)",
+      "Read(//Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/.claire/worktrees/multi-app-accounts/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/tamaraloni/Desktop/Study/YearC/SemesterB/CellularSeminar/FeaturePulse/docs/superpowers/specs",
+      "/Users/tamaraloni/.claude"
+    ]
+  }
+}

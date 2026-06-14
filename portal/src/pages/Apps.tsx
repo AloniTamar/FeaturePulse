@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, type AppSummary } from '../api/client'
 import { useApp } from '../context/AppContext'
