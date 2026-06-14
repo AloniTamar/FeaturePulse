@@ -1,17 +1,16 @@
-// portal/src/pages/Login.tsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, setToken } from '../api/client'
 
 export default function Login() {
   const nav = useNavigate()
-  const [tab, setTab]         = useState<'login' | 'register'>('login')
-  const [email, setEmail]     = useState('')
+  const [tab,      setTab]    = useState<'login' | 'register'>('login')
+  const [email,    setEmail]  = useState('')
   const [password, setPass]   = useState('')
-  const [appName, setAppName] = useState('')
-  const [pkgName, setPkg]     = useState('')
-  const [error, setError]     = useState('')
-  const [loading, setLoading] = useState(false)
+  const [appName,  setApp]    = useState('')
+  const [pkgName,  setPkg]    = useState('')
+  const [error,    setError]  = useState('')
+  const [loading,  setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,14 +20,17 @@ export default function Login() {
       if (tab === 'login') {
         const { token } = await api.login(email, password)
         setToken(token)
-        nav('/dashboard')
+        localStorage.setItem('fp_email', email)
       } else {
         const { token, appId, apiKey } = await api.register(email, password, appName, pkgName)
         setToken(token)
-        localStorage.setItem('fp_appId', appId)
-        localStorage.setItem('fp_apiKey', apiKey)
-        nav('/dashboard')
+        localStorage.setItem('fp_appId',   appId)
+        localStorage.setItem('fp_apiKey',  apiKey)
+        localStorage.setItem('fp_appName', appName)
+        localStorage.setItem('fp_pkgName', pkgName)
+        localStorage.setItem('fp_email',   email)
       }
+      nav('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -37,38 +39,92 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: '32px', border: '1px solid #e2e8f0', borderRadius: 12 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24 }}>FeaturePulse</h1>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {(['login', 'register'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            style={{ flex: 1, padding: '8px', border: 'none', borderRadius: 6, cursor: 'pointer',
-              background: tab === t ? '#4F46E5' : '#F1F5F9', color: tab === t ? '#fff' : '#334155' }}>
-            {t === 'login' ? 'Sign in' : 'Register'}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+      <div
+        className="bg-white border border-slate-200 shadow-md"
+        style={{ width: 400, padding: 32, borderRadius: 14 }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 mb-6">
+          <div
+            className="flex items-center justify-center overflow-hidden flex-shrink-0"
+            style={{ width: 32, height: 32, borderRadius: 9 }}
+          >
+            <img src="/icon.png" alt="FeaturePulse" style={{ width: 32, height: 32, objectFit: 'cover' }} />
+          </div>
+          <span className="text-slate-900 font-extrabold" style={{ fontSize: 15, letterSpacing: '-0.3px' }}>
+            FeaturePulse
+          </span>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5 mb-6">
+          {(['login', 'register'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2 rounded font-semibold transition-colors ${
+                tab === t
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+              style={{ fontSize: 13 }}
+            >
+              {t === 'login' ? 'Sign in' : 'Register'}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
+            style={{ padding: '10px 14px', fontSize: 14 }}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPass(e.target.value)}
+            required
+            className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
+            style={{ padding: '10px 14px', fontSize: 14 }}
+          />
+          {tab === 'register' && (
+            <>
+              <input
+                placeholder="App name"
+                value={appName}
+                onChange={(e) => setApp(e.target.value)}
+                required
+                className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
+                style={{ padding: '10px 14px', fontSize: 14 }}
+              />
+              <input
+                placeholder="Package name (com.example.app)"
+                value={pkgName}
+                onChange={(e) => setPkg(e.target.value)}
+                required
+                className="border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors font-mono"
+                style={{ padding: '10px 14px', fontSize: 13 }}
+              />
+            </>
+          )}
+          {error && <p className="text-red-600" style={{ fontSize: 13 }}>{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
+            style={{ padding: '10px 0', fontSize: 14 }}
+          >
+            {loading ? 'Loading…' : tab === 'login' ? 'Sign in' : 'Create account'}
           </button>
-        ))}
+        </form>
       </div>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
-          required style={inputStyle} />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPass(e.target.value)}
-          required style={inputStyle} />
-        {tab === 'register' && <>
-          <input placeholder="App name" value={appName} onChange={e => setAppName(e.target.value)}
-            required style={inputStyle} />
-          <input placeholder="Package name (com.example.app)" value={pkgName} onChange={e => setPkg(e.target.value)}
-            required style={inputStyle} />
-        </>}
-        {error && <p style={{ color: '#DC2626', fontSize: 14 }}>{error}</p>}
-        <button type="submit" disabled={loading}
-          style={{ padding: 12, background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
-          {loading ? 'Loading…' : tab === 'login' ? 'Sign in' : 'Create account'}
-        </button>
-      </form>
     </div>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: 8, fontSize: 15,
 }
