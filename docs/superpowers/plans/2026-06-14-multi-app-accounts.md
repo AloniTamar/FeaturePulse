@@ -1,6 +1,6 @@
 # Multi-App Accounts Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Allow one FeaturePulse account to own multiple apps, with app context living in the URL (`/apps/:appId/...`) instead of localStorage.
 
@@ -44,7 +44,7 @@
 **Files:**
 - Modify: `server/prisma/schema.prisma`
 
-- [ ] **Step 1: Update schema.prisma**
+- [x] **Step 1: Update schema.prisma**
 
 Replace the entire file with:
 
@@ -140,7 +140,7 @@ model StateTransition {
 }
 ```
 
-- [ ] **Step 2: Create the migration (two-step, dev environment)**
+- [x] **Step 2: Create the migration (two-step, dev environment)**
 
 Because existing `App` rows have `ownerEmail` but no `userId`, run two migrations:
 
@@ -166,7 +166,7 @@ Then run only this migration:
 npx prisma migrate deploy
 ```
 
-- [ ] **Step 3: Run the second migration to finalize**
+- [x] **Step 3: Run the second migration to finalize**
 
 ```bash
 npx prisma migrate dev --name finalize_app_userid --create-only
@@ -214,7 +214,7 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
-- [ ] **Step 4: Verify migrations applied**
+- [x] **Step 4: Verify migrations applied**
 
 ```bash
 npx prisma db pull 2>&1 | head -5
@@ -232,7 +232,7 @@ p.app.findMany({ include: { user: true } }).then(a => console.log(a.length + ' a
 
 Expected: prints `N apps found` with no error.
 
-- [ ] **Step 5: Update `server/tests/routes.test.ts` — fix beforeAll**
+- [x] **Step 5: Update `server/tests/routes.test.ts` — fix beforeAll**
 
 The `beforeAll` creates an `App` directly with `ownerEmail`. Replace that block:
 
@@ -259,7 +259,7 @@ beforeAll(async () => {
 })
 ```
 
-- [ ] **Step 6: Run existing tests and confirm they pass**
+- [x] **Step 6: Run existing tests and confirm they pass**
 
 ```bash
 cd server && npx jest --testPathPattern="routes|ingestion|classification" --forceExit 2>&1 | tail -20
@@ -267,7 +267,7 @@ cd server && npx jest --testPathPattern="routes|ingestion|classification" --forc
 
 Expected: all suites pass (the e2e test will be updated in Task 2).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/prisma/schema.prisma server/prisma/migrations server/tests/routes.test.ts
@@ -282,7 +282,7 @@ git commit -m "feat(schema): replace ownerEmail with userId FK, add cascade dele
 - Modify: `server/src/routes/auth.ts`
 - Modify: `server/tests/e2e.test.ts`
 
-- [ ] **Step 1: Write failing tests for the new auth contract**
+- [x] **Step 1: Write failing tests for the new auth contract**
 
 Create `server/tests/auth.test.ts`:
 
@@ -408,7 +408,7 @@ describe('DELETE /auth/me', () => {
 })
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 cd server && npx jest --testPathPattern="auth.test" --forceExit 2>&1 | tail -20
@@ -416,7 +416,7 @@ cd server && npx jest --testPathPattern="auth.test" --forceExit 2>&1 | tail -20
 
 Expected: failures on all three describe blocks.
 
-- [ ] **Step 3: Rewrite `server/src/routes/auth.ts`**
+- [x] **Step 3: Rewrite `server/src/routes/auth.ts`**
 
 ```typescript
 import { Router } from 'express'
@@ -510,7 +510,7 @@ authRouter.patch('/me/password', jwtAuth, async (req: AuthRequest, res) => {
 })
 ```
 
-- [ ] **Step 4: Run auth tests to confirm they pass**
+- [x] **Step 4: Run auth tests to confirm they pass**
 
 ```bash
 cd server && npx jest --testPathPattern="auth.test" --forceExit 2>&1 | tail -20
@@ -518,7 +518,7 @@ cd server && npx jest --testPathPattern="auth.test" --forceExit 2>&1 | tail -20
 
 Expected: 5 passing tests.
 
-- [ ] **Step 5: Update `server/tests/e2e.test.ts`**
+- [x] **Step 5: Update `server/tests/e2e.test.ts`**
 
 The first test and the variable setup need updating. Read the file, then replace the first `it` block and add an app-creation step after register:
 
@@ -545,7 +545,7 @@ it('POST /api/v1/apps creates the first app and returns apiKey', async () => {
 })
 ```
 
-- [ ] **Step 6: Run all server tests**
+- [x] **Step 6: Run all server tests**
 
 ```bash
 cd server && npx jest --forceExit 2>&1 | tail -30
@@ -553,7 +553,7 @@ cd server && npx jest --forceExit 2>&1 | tail -30
 
 Expected: all suites pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/src/routes/auth.ts server/tests/auth.test.ts server/tests/e2e.test.ts
@@ -568,7 +568,7 @@ git commit -m "feat(auth): register creates user only; login returns apps[]; add
 - Modify: `server/src/routes/apps.ts`
 - Create: `server/tests/apps.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `server/tests/apps.test.ts`:
 
@@ -673,7 +673,7 @@ describe('App CRUD', () => {
 })
 ```
 
-- [ ] **Step 2: Run to confirm failures**
+- [x] **Step 2: Run to confirm failures**
 
 ```bash
 cd server && npx jest --testPathPattern="apps.test" --forceExit 2>&1 | tail -20
@@ -681,7 +681,7 @@ cd server && npx jest --testPathPattern="apps.test" --forceExit 2>&1 | tail -20
 
 Expected: multiple failures.
 
-- [ ] **Step 3: Rewrite `server/src/routes/apps.ts`**
+- [x] **Step 3: Rewrite `server/src/routes/apps.ts`**
 
 ```typescript
 import { Router } from 'express'
@@ -855,7 +855,7 @@ appsRouter.get('/:appId/export', jwtAuth, async (req: AuthRequest, res) => {
 })
 ```
 
-- [ ] **Step 4: Add ownership guard to `dashboard.ts` routes**
+- [x] **Step 4: Add ownership guard to `dashboard.ts` routes**
 
 Open `server/src/routes/dashboard.ts`. At the top, add the import and helper:
 
@@ -876,7 +876,7 @@ dashboardRouter.get('/apps/:appId/dashboard', jwtAuth, async (req: AuthRequest, 
 
 Apply the same pattern to the `/dead`, `/declining`, and `/trend` routes.
 
-- [ ] **Step 5: Run all server tests**
+- [x] **Step 5: Run all server tests**
 
 ```bash
 cd server && npx jest --forceExit 2>&1 | tail -30
@@ -884,7 +884,7 @@ cd server && npx jest --forceExit 2>&1 | tail -30
 
 Expected: all suites pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add server/src/routes/apps.ts server/src/routes/dashboard.ts server/tests/apps.test.ts
@@ -899,7 +899,7 @@ git commit -m "feat(apps): scoped list, create, rename, delete; ownership guard 
 - Modify: `portal/src/api/client.ts`
 - Create: `portal/src/context/AppContext.tsx`
 
-- [ ] **Step 1: Rewrite `portal/src/api/client.ts`**
+- [x] **Step 1: Rewrite `portal/src/api/client.ts`**
 
 ```typescript
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -1011,7 +1011,7 @@ export interface Pagination { page: number; limit: number; total: number }
 export interface TrendPoint { date: string; avgInteractionRate: number }
 ```
 
-- [ ] **Step 2: Create `portal/src/context/AppContext.tsx`**
+- [x] **Step 2: Create `portal/src/context/AppContext.tsx`**
 
 ```tsx
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
@@ -1052,7 +1052,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export const useApp = () => useContext(AppContext)
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Verify TypeScript compiles**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -30
@@ -1060,7 +1060,7 @@ cd portal && npx tsc --noEmit 2>&1 | head -30
 
 Expected: no errors (or only pre-existing errors unrelated to the new files).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add portal/src/api/client.ts portal/src/context/AppContext.tsx
@@ -1075,7 +1075,7 @@ git commit -m "feat(portal): update api client types; add AppContext for shared 
 - Modify: `portal/src/App.tsx`
 - Modify: `portal/src/pages/Login.tsx`
 
-- [ ] **Step 1: Rewrite `portal/src/App.tsx`**
+- [x] **Step 1: Rewrite `portal/src/App.tsx`**
 
 ```tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
@@ -1121,7 +1121,7 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 2: Rewrite `portal/src/pages/Login.tsx`**
+- [x] **Step 2: Rewrite `portal/src/pages/Login.tsx`**
 
 ```tsx
 import { useState } from 'react'
@@ -1226,13 +1226,13 @@ export default function Login() {
 }
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Verify TypeScript compiles**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -30
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add portal/src/App.tsx portal/src/pages/Login.tsx
@@ -1246,7 +1246,7 @@ git commit -m "feat(portal): URL-based routing /apps/:appId/*; login redirects b
 **Files:**
 - Create: `portal/src/components/AppModal.tsx`
 
-- [ ] **Step 1: Create `portal/src/components/AppModal.tsx`**
+- [x] **Step 1: Create `portal/src/components/AppModal.tsx`**
 
 ```tsx
 import { useState, type FC } from 'react'
@@ -1320,13 +1320,13 @@ export const AppModal: FC<Props> = ({ onClose, onCreated }) => {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -20
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add portal/src/components/AppModal.tsx
@@ -1340,7 +1340,7 @@ git commit -m "feat(portal): add shared AppModal component for creating new apps
 **Files:**
 - Create: `portal/src/pages/Apps.tsx`
 
-- [ ] **Step 1: Create `portal/src/pages/Apps.tsx`**
+- [x] **Step 1: Create `portal/src/pages/Apps.tsx`**
 
 ```tsx
 import { useState, type FC } from 'react'
@@ -1617,13 +1617,13 @@ export default function Apps() {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -20
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add portal/src/pages/Apps.tsx
@@ -1637,7 +1637,7 @@ git commit -m "feat(portal): add Apps management page — create, rename, delete
 **Files:**
 - Modify: `portal/src/components/Layout.tsx`
 
-- [ ] **Step 1: Rewrite `portal/src/components/Layout.tsx`**
+- [x] **Step 1: Rewrite `portal/src/components/Layout.tsx`**
 
 Replace the full file:
 
@@ -1999,13 +1999,13 @@ export default function Layout() {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -30
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add portal/src/components/Layout.tsx
@@ -2021,7 +2021,7 @@ git commit -m "feat(portal): Layout — AppProvider, app switcher popover, three
 - Modify: `portal/src/pages/Features.tsx`
 - Modify: `portal/src/pages/Settings.tsx`
 
-- [ ] **Step 1: Update `Dashboard.tsx` — replace module-level `APP_ID` with `useParams`**
+- [x] **Step 1: Update `Dashboard.tsx` — replace module-level `APP_ID` with `useParams`**
 
 Remove line 13:
 ```typescript
@@ -2068,7 +2068,7 @@ const runCron = useCallback(async () => {
 }, [cronState, appId])
 ```
 
-- [ ] **Step 2: Update `Features.tsx` — replace module-level `APP_ID`**
+- [x] **Step 2: Update `Features.tsx` — replace module-level `APP_ID`**
 
 Remove line 7:
 ```typescript
@@ -2091,7 +2091,7 @@ Update `useEffect(() => { load(1) }, [stateFilter])` to include `appId`:
 useEffect(() => { load(1) }, [stateFilter, appId])
 ```
 
-- [ ] **Step 3: Rewrite `Settings.tsx` — SDK config for the active app**
+- [x] **Step 3: Rewrite `Settings.tsx` — SDK config for the active app**
 
 ```tsx
 import { useApp } from '../context/AppContext'
@@ -2132,13 +2132,13 @@ FeaturePulse.init(this, PulseConfig.Builder()
 }
 ```
 
-- [ ] **Step 4: Verify TypeScript**
+- [x] **Step 4: Verify TypeScript**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -30
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add portal/src/pages/Dashboard.tsx portal/src/pages/Features.tsx portal/src/pages/Settings.tsx
@@ -2152,7 +2152,7 @@ git commit -m "feat(portal): replace localStorage appId with useParams in Dashbo
 **Files:**
 - Modify: `portal/src/pages/Account.tsx`
 
-- [ ] **Step 1: Rewrite `portal/src/pages/Account.tsx`**
+- [x] **Step 1: Rewrite `portal/src/pages/Account.tsx`**
 
 ```tsx
 import { useState } from 'react'
@@ -2281,13 +2281,13 @@ export default function Account() {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1 | head -20
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add portal/src/pages/Account.tsx
@@ -2301,21 +2301,21 @@ git commit -m "feat(portal): build out Account page — profile, password change
 **Files:**
 - Verify and clean up any remaining `localStorage.getItem('fp_appId')` / `fp_appName` / `fp_pkgName` / `fp_apiKey` references
 
-- [ ] **Step 1: Find all remaining stale localStorage references**
+- [x] **Step 1: Find all remaining stale localStorage references**
 
 ```bash
 cd portal && grep -rn "fp_appId\|fp_appName\|fp_pkgName\|fp_apiKey" src/ 2>&1
 ```
 
-- [ ] **Step 2: Fix each occurrence**
+- [x] **Step 2: Fix each occurrence**
 
 For any remaining `localStorage.getItem('fp_appId')` in pages not yet updated, replace with `useParams()`. For any `localStorage.setItem('fp_appId', ...)` in Login or elsewhere, verify it's already been removed. If `fp_appName` appears in any page header, replace with `activeApp?.name` from `useApp()`.
 
-- [ ] **Step 3: Verify `clearToken` in `api/client.ts` no longer removes stale keys**
+- [x] **Step 3: Verify `clearToken` in `api/client.ts` no longer removes stale keys**
 
 Confirm the updated `clearToken` function only removes `fp_token` and `fp_email` — already done in Task 4.
 
-- [ ] **Step 4: Final TypeScript check**
+- [x] **Step 4: Final TypeScript check**
 
 ```bash
 cd portal && npx tsc --noEmit 2>&1
@@ -2323,7 +2323,7 @@ cd portal && npx tsc --noEmit 2>&1
 
 Expected: zero errors.
 
-- [ ] **Step 5: Build check**
+- [x] **Step 5: Build check**
 
 ```bash
 cd portal && npm run build 2>&1 | tail -15
@@ -2331,7 +2331,7 @@ cd portal && npm run build 2>&1 | tail -15
 
 Expected: build succeeds with no errors.
 
-- [ ] **Step 6: Run all server tests one final time**
+- [x] **Step 6: Run all server tests one final time**
 
 ```bash
 cd server && npx jest --forceExit 2>&1 | tail -20
@@ -2339,7 +2339,7 @@ cd server && npx jest --forceExit 2>&1 | tail -20
 
 Expected: all tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
