@@ -1,0 +1,6 @@
+jdk:
+  - openjdk17
+before_install:
+  - sdk auto-update --yes
+install:
+  - ./gradlew :sdk:assembleRelease :sdk:publishToMavenLocal
