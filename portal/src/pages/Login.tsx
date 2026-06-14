@@ -18,9 +18,13 @@ export default function Login() {
     setLoading(true)
     try {
       if (tab === 'login') {
-        const { token } = await api.login(email, password)
+        const { token, appId, appName, pkgName, apiKey } = await api.login(email, password)
         setToken(token)
         localStorage.setItem('fp_email', email)
+        if (appId)   localStorage.setItem('fp_appId',   appId)
+        if (appName) localStorage.setItem('fp_appName', appName)
+        if (pkgName) localStorage.setItem('fp_pkgName', pkgName)
+        if (apiKey)  localStorage.setItem('fp_apiKey',  apiKey)
       } else {
         const { token, appId, apiKey } = await api.register(email, password, appName, pkgName)
         setToken(token)

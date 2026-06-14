@@ -53,5 +53,15 @@ authRouter.post('/login', async (req, res) => {
   if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
-  res.json({ token })
+
+  const app = await prisma.app.findFirst({ where: { ownerEmail: email } })
+  res.json({
+    token,
+    ...(app ? {
+      appId:   app.id,
+      appName: app.name,
+      pkgName: app.packageName,
+      apiKey:  app.apiKey,
+    } : {}),
+  })
 })
