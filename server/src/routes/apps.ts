@@ -1,10 +1,28 @@
 // server/src/routes/apps.ts
 import { Router } from 'express'
 import { prisma } from '../db/client'
-import { jwtAuth } from '../middleware/auth'
-
+import { jwtAuth, type AuthRequest } from '../middleware/auth'
+import { z } from 'zod'
+import crypto from 'crypto'
 
 export const appsRouter = Router()
+
+const CreateAppSchema = z.object({
+  name: z.string().min(1),
+  packageName: z.string().min(1),
+})
+
+appsRouter.post('/', jwtAuth, async (req: AuthRequest, res) => {
+  const result = CreateAppSchema.safeParse(req.body)
+  if (!result.success) return res.status(400).json({ error: result.error.flatten() })
+
+  const { name, packageName } = result.data
+  const apiKey = 'fp_' + crypto.randomBytes(24).toString('hex')
+  const app = await prisma.app.create({
+    data: { name, packageName, apiKey, apiKeyHash: apiKey, userId: req.userId! },
+  })
+  res.status(201).json({ id: app.id, name: app.name, packageName: app.packageName, apiKey: app.apiKey, createdAt: app.createdAt })
+})
 
 // SDK fetches remote config via this (no auth required — public config only)
 appsRouter.get('/config', async (req, res) => {

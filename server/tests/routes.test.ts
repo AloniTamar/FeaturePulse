@@ -75,15 +75,13 @@ describe('POST /api/v1/events/batch', () => {
 })
 
 describe('POST /api/v1/auth/register', () => {
-  test('returns 201 with token and apiKey', async () => {
+  test('returns 201 with token only (no apiKey)', async () => {
     const res = await request(app).post('/api/v1/auth/register').send({
       email: `test_${Date.now()}@example.com`,
       password: 'password123',
-      appName: 'MyApp',
-      packageName: 'com.myapp',
     })
     expect(res.status).toBe(201)
     expect(res.body.token).toBeTruthy()
-    expect(res.body.apiKey).toMatch(/^fp_/)
+    expect(res.body.apiKey).toBeUndefined()
   })
 })

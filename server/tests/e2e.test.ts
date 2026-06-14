@@ -21,17 +21,24 @@ describe('FeaturePulse full flow', () => {
   let apiKey: string
   let jwtToken: string
 
-  it('POST /auth/register creates app and returns apiKey + token', async () => {
+  it('POST /auth/register creates user (no app) and returns token', async () => {
     const res = await request(app).post('/api/v1/auth/register').send({
       email: 'e2e@example.com', password: 'test1234',
-      appName: 'E2E Demo App', packageName: 'com.e2e.demo',
     })
     expect(res.status).toBe(201)
-    expect(res.body.apiKey).toMatch(/^fp_/)
     expect(res.body.token).toBeTruthy()
-    apiKey   = res.body.apiKey
-    appId    = res.body.appId
     jwtToken = res.body.token
+  })
+
+  it('POST /api/v1/apps creates the first app and returns apiKey', async () => {
+    const res = await request(app)
+      .post('/api/v1/apps')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send({ name: 'E2E Demo App', packageName: 'com.e2e.demo' })
+    expect(res.status).toBe(201)
+    expect(res.body.apiKey).toMatch(/^fp_/)
+    apiKey = res.body.apiKey
+    appId  = res.body.id
   })
 
   it('POST /api/v1/events/batch accepts events', async () => {
