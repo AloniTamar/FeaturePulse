@@ -97,6 +97,19 @@ export default function Dashboard() {
       api.getDashboard(APP_ID)
         .then((d) => setData(d as DashboardData))
         .catch(() => {})
+      // Refresh trend chart — cron generates new DailyAggregate rows
+      api.getTrend(APP_ID, 30)
+        .then((trendRows) => {
+          if (trendRows.length > 0) {
+            setTrend({
+              labels: trendRows.map(r =>
+                new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              ),
+              data: trendRows.map(r => +(r.avgInteractionRate * 100).toFixed(1)),
+            })
+          }
+        })
+        .catch(() => {})
     } catch {
       setCronState('error')
     } finally {
