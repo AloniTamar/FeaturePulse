@@ -69,6 +69,44 @@ dashboardRouter.get('/apps/:appId/declining', jwtAuth, async (req: AuthRequest, 
   }
 })
 
+// GET /api/v1/apps/:appId/transitions
+dashboardRouter.get('/apps/:appId/transitions', jwtAuth, async (req: AuthRequest, res) => {
+  const { appId } = req.params
+  const { toState, sort = 'desc', page = '1', limit = '20' } = req.query as Record<string, string>
+  const pageNum  = Math.max(1, parseInt(page, 10) || 1)
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20))
+  const skip     = (pageNum - 1) * limitNum
+
+  try {
+    const app = await prisma.app.findUnique({ where: { id: appId } })
+    if (!app) return res.status(404).json({ error: 'App not found' })
+    if (app.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' })
+
+    const where = {
+      feature: { appId },
+      ...(toState ? { newState: toState } : {}),
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.stateTransition.findMany({
+        where,
+        orderBy: { changedAt: sort === 'asc' ? 'asc' : 'desc' },
+        skip,
+        take: limitNum,
+        include: { feature: { select: { id: true, resourceName: true, screenName: true } } },
+      }),
+      prisma.stateTransition.count({ where }),
+    ])
+
+    res.json({
+      data,
+      pagination: { page: pageNum, limit: limitNum, total },
+    })
+  } catch {
+    res.status(503).json({ error: 'Service unavailable' })
+  }
+})
+
 // GET /api/v1/apps/:appId/trend?days=30
 dashboardRouter.get('/apps/:appId/trend', jwtAuth, async (req: AuthRequest, res) => {
   const days = Math.max(1, Math.min(365, parseInt((req.query.days as string) ?? '30', 10) || 30))

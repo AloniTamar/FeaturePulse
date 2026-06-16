@@ -96,3 +96,53 @@ describe('App CRUD', () => {
     expect(res.status).toBe(403)
   })
 })
+
+describe('GET /apps/:appId/transitions', () => {
+  let userId: string
+  let token: string
+  let appId: string
+
+  beforeEach(async () => {
+    const user = await prisma.user.create({ data: { email: 'trans@test.com', passwordHash: 'x' } })
+    userId = user.id
+    token = makeToken(userId)
+    const a = await prisma.app.create({
+      data: { name: 'T', packageName: 'com.t', apiKey: 'fp_trans', apiKeyHash: 'fp_trans', userId },
+    })
+    appId = a.id
+    const feat = await prisma.feature.create({
+      data: { id: 'f_trans', appId, elementType: 'Button', screenName: 'Home', state: 'DECLINING' },
+    })
+    await prisma.stateTransition.create({
+      data: { featureId: feat.id, oldState: 'THRIVING', newState: 'DECLINING' },
+    })
+  })
+
+  it('returns paginated transitions', async () => {
+    const res = await request(app)
+      .get(`/api/v1/apps/${appId}/transitions`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveLength(1)
+    expect(res.body.data[0].newState).toBe('DECLINING')
+    expect(res.body.data[0].feature.screenName).toBe('Home')
+    expect(res.body.pagination.total).toBe(1)
+  })
+
+  it('filters by toState', async () => {
+    const res = await request(app)
+      .get(`/api/v1/apps/${appId}/transitions?toState=DEAD`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveLength(0)
+  })
+
+  it('returns 403 for wrong user', async () => {
+    const other = await prisma.user.create({ data: { email: 'other_trans@test.com', passwordHash: 'x' } })
+    const otherToken = makeToken(other.id)
+    const res = await request(app)
+      .get(`/api/v1/apps/${appId}/transitions`)
+      .set('Authorization', `Bearer ${otherToken}`)
+    expect(res.status).toBe(403)
+  })
+})
