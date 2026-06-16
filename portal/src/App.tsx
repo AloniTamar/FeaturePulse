@@ -5,7 +5,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Features from './pages/Features'
 import FeatureDetail from './pages/FeatureDetail'
-import Alerts from './pages/Alerts'
+import Transitions from './pages/Transitions'
 import Settings from './pages/Settings'
 import Account from './pages/Account'
 import Apps from './pages/Apps'
@@ -30,7 +30,7 @@ export default function App() {
             <Route path="dashboard"              element={<Dashboard />} />
             <Route path="features"               element={<Features />} />
             <Route path="features/:featureId"    element={<FeatureDetail />} />
-            <Route path="alerts"                 element={<Alerts />} />
+            <Route path="transitions"            element={<Transitions />} />
             <Route path="settings"               element={<Settings />} />
           </Route>
         </Route>

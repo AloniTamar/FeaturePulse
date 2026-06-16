@@ -60,6 +60,12 @@ const ChevronIcon: FC<{ className?: string }> = ({ className }) => (
     <path d="M3.5 5.5l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
+const ClockIcon: FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <circle cx="7.5" cy="7.5" r="6" />
+    <path d="M7.5 4v3.5l2.5 2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
 
 const PAGE_LABELS: Record<string, string> = {
   '/apps': 'Apps',
@@ -67,7 +73,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/docs': 'Docs',
   'dashboard': 'Dashboard',
   'features':  'Features',
-  'alerts':    'Alerts',
+  'transitions': 'Transitions',
   'settings':  'Settings',
 }
 
@@ -249,7 +255,8 @@ function Sidebar({ deadCount }: { deadCount: number }) {
   const { appId } = useParams<{ appId?: string }>()
   const email    = localStorage.getItem('fp_email') ?? ''
   const initials = email.slice(0, 2).toUpperCase() || 'FP'
-  const hasApp   = !!appId
+  const effectiveAppId = appId ?? localStorage.getItem('fp_last_app_id') ?? null
+  const hasApp = !!effectiveAppId
 
   return (
     <aside
@@ -274,16 +281,16 @@ function Sidebar({ deadCount }: { deadCount: number }) {
         <p className="uppercase text-slate-400 font-bold px-2 mb-1" style={{ fontSize: 10, letterSpacing: '0.09em', marginTop: 4 }}>
           Analytics
         </p>
-        <NavItem to={hasApp ? `/apps/${appId}/dashboard` : '#'} label="Dashboard" Icon={HomeIcon} disabled={!hasApp} />
-        <NavItem to={hasApp ? `/apps/${appId}/features` : '#'}  label="Features"  Icon={GridIcon}  badgeCount={hasApp ? deadCount : 0} badgeColor="red" disabled={!hasApp} />
-        <NavItem to={hasApp ? `/apps/${appId}/alerts` : '#'}    label="Alerts"    Icon={BellIcon}  disabled={!hasApp} />
+        <NavItem to={hasApp ? `/apps/${effectiveAppId}/dashboard` : '#'} label="Dashboard" Icon={HomeIcon} disabled={!hasApp} />
+        <NavItem to={hasApp ? `/apps/${effectiveAppId}/features` : '#'}  label="Features"  Icon={GridIcon}  badgeCount={hasApp ? deadCount : 0} badgeColor="red" disabled={!hasApp} />
+        <NavItem to={hasApp ? `/apps/${effectiveAppId}/transitions` : '#'} label="Transitions" Icon={ClockIcon} disabled={!hasApp} />
 
         <div className="my-1" style={{ height: 1, background: '#F1F5F9', margin: '4px 0' }} />
 
         <p className="uppercase text-slate-400 font-bold px-2 mb-1 mt-3" style={{ fontSize: 10, letterSpacing: '0.09em' }}>
           App
         </p>
-        <NavItem to={hasApp ? `/apps/${appId}/settings` : '#'} label="Settings" Icon={CogIcon} disabled={!hasApp} />
+        <NavItem to={hasApp ? `/apps/${effectiveAppId}/settings` : '#'} label="Settings" Icon={CogIcon} disabled={!hasApp} />
 
         <div className="my-1" style={{ height: 1, background: '#F1F5F9', margin: '4px 0' }} />
 

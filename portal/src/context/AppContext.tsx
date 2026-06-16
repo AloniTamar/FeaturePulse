@@ -24,6 +24,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { reloadApps() }, [])
 
+  useEffect(() => {
+    if (appId) localStorage.setItem('fp_last_app_id', appId)
+  }, [appId])
+
   const activeApp = apps.find(a => a.id === appId)
 
   return (
