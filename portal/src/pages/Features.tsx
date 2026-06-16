@@ -1,24 +1,37 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import FeatureTable from '../components/FeatureTable'
+import FilterPills from '../components/FilterPills'
 import { useTopbar } from '../components/TopbarContext'
+import { useApp } from '../context/AppContext'
+import { useCron } from '../hooks/useCron'
 import type { Feature, Pagination } from '../api/client'
 
-const STATES = ['', 'THRIVING', 'DECLINING', 'DORMANT', 'DEAD'] as const
+const SORT_OPTIONS = [
+  { value: 'lastInteraction_desc', label: 'Last interaction — newest' },
+  { value: 'lastInteraction_asc',  label: 'Last interaction — oldest' },
+  { value: 'name_asc',             label: 'Name (A → Z)' },
+  { value: 'interactionRate_desc', label: 'Interaction rate — highest' },
+]
 
 export default function Features() {
-  const { appId = '' } = useParams<{ appId: string }>()
-  const { setActions } = useTopbar()
-  const [features, setFeatures]       = useState<Feature[]>([])
-  const [pagination, setPagination]   = useState<Pagination>({ page: 1, limit: 20, total: 0 })
-  const [stateFilter, setStateFilter] = useState('')
-  const [loading, setLoading]         = useState(false)
+  const { appId = '' }   = useParams<{ appId: string }>()
+  const { activeApp }    = useApp()
+  const { setActions }   = useTopbar()
+  const { cronState, runCron } = useCron(appId)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const [features, setFeatures]     = useState<Feature[]>([])
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0 })
+  const [stateFilter, setStateFilter] = useState(() => searchParams.get('state') ?? '')
+  const [sort, setSort]             = useState('lastInteraction_desc')
+  const [loading, setLoading]       = useState(false)
 
   async function load(page = 1) {
     setLoading(true)
     try {
-      const params: Record<string, string> = { page: String(page), limit: '20' }
+      const params: Record<string, string> = { page: String(page), limit: '20', sort }
       if (stateFilter) params['state'] = stateFilter
       const res = await api.getFeatures(appId, params)
       setFeatures(res.data)
@@ -30,32 +43,56 @@ export default function Features() {
     }
   }
 
-  useEffect(() => { load(1) }, [stateFilter, appId])
+  useEffect(() => { load(1) }, [stateFilter, sort, appId])
+
+  function handleFilterChange(v: string) {
+    setStateFilter(v)
+    setSearchParams(v ? { state: v } : {}, { replace: true })
+  }
+
+  const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
   useEffect(() => {
-    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
     setActions(
-      <button
-        onClick={async () => {
-          const token = localStorage.getItem('fp_token')
-          const res = await fetch(`${BASE}/api/v1/apps/${appId}/export?format=csv`, {
-            headers: { Authorization: `Bearer ${token ?? ''}` },
-          })
-          if (!res.ok) return
-          const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url; a.download = 'features.csv'; a.click()
-          URL.revokeObjectURL(url)
-        }}
-        className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold rounded-lg transition-colors"
-        style={{ padding: '6px 13px', fontSize: 12.5 }}
-      >
-        Export CSV
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={runCron}
+          disabled={cronState === 'loading'}
+          className={`border font-semibold rounded-lg transition-colors ${
+            cronState === 'ok'
+              ? 'border-green-300 bg-green-50 text-green-600'
+              : cronState === 'error'
+              ? 'border-red-300 bg-red-50 text-red-600'
+              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+          }`}
+          style={{ padding: '6px 13px', fontSize: 12.5 }}
+        >
+          {cronState === 'loading' ? 'Running…' : cronState === 'ok' ? '✓ Done' : cronState === 'error' ? 'Error' : 'Run Cron Now'}
+        </button>
+        <button
+          onClick={async () => {
+            const token = localStorage.getItem('fp_token')
+            const res = await fetch(`${BASE}/api/v1/apps/${appId}/export?format=csv`, {
+              headers: { Authorization: `Bearer ${token ?? ''}` },
+            })
+            if (!res.ok) return
+            const blob = await res.blob()
+            const url  = URL.createObjectURL(blob)
+            const a    = document.createElement('a')
+            a.href = url
+            a.download = `${activeApp?.name ?? appId}-features.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+          className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold rounded-lg transition-colors"
+          style={{ padding: '6px 13px', fontSize: 12.5 }}
+        >
+          Export CSV
+        </button>
+      </div>
     )
     return () => setActions(null)
-  }, [setActions, appId])
+  }, [setActions, appId, activeApp, cronState, runCron])
 
   async function handleIgnore(id: string, ignore: boolean) {
     await api.ignoreFeature(id, ignore)
@@ -67,21 +104,25 @@ export default function Features() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <h1 className="text-slate-900 font-extrabold flex-1" style={{ fontSize: 24, letterSpacing: '-0.5px' }}>
+      <div className="mb-5">
+        <h1 className="text-slate-900 font-extrabold mb-4" style={{ fontSize: 24, letterSpacing: '-0.5px' }}>
           Features
         </h1>
-        <select
-          value={stateFilter}
-          onChange={(e) => setStateFilter(e.target.value)}
-          className="border border-slate-200 rounded-lg text-slate-600 bg-white outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
-          style={{ padding: '6px 12px', fontSize: 13 }}
-        >
-          <option value="">All states</option>
-          {STATES.slice(1).map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3 flex-wrap">
+          <FilterPills value={stateFilter} onChange={handleFilterChange} />
+          <div className="ml-auto flex-shrink-0">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="border border-slate-200 rounded-lg text-slate-600 bg-white outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
+              style={{ padding: '6px 12px', fontSize: 13 }}
+            >
+              {SORT_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Table */}
