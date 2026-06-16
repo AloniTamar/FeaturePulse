@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import StateBadge from './StateBadge'
 import type { Feature } from '../api/client'
 
@@ -9,6 +9,7 @@ interface Props {
 
 export default function FeatureTable({ features, onIgnore }: Props) {
   const nav = useNavigate()
+  const { appId } = useParams<{ appId: string }>()
 
   return (
     <table className="w-full" style={{ borderCollapse: 'collapse' }}>
@@ -30,7 +31,7 @@ export default function FeatureTable({ features, onIgnore }: Props) {
           <tr
             key={f.id}
             className="border-b border-slate-50 last:border-none cursor-pointer hover:bg-slate-50 transition-colors"
-            onClick={() => nav(`/features/${f.id}`)}
+            onClick={() => nav(`/apps/${appId}/features/${f.id}`)}
           >
             <td style={{ padding: '11px 20px' }}>
               <div className="font-mono text-slate-800 font-medium" style={{ fontSize: 11.5 }}>
