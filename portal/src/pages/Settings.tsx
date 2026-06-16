@@ -147,24 +147,34 @@ export default function Settings() {
   const [deadDays,    setDeadDays]    = useState(activeApp?.deadThresholdDays    ?? 30)
   const [dormantDays, setDormantDays] = useState(activeApp?.dormantThresholdDays ?? 14)
   const [retention,   setRetention]   = useState(activeApp?.eventRetentionDays   ?? 7)
-  const [saved,       setSaved]       = useState(false)
-  const [saving,      setSaving]      = useState(false)
+
+  const [thresholdSaved,   setThresholdSaved]   = useState(false)
+  const [thresholdSaving,  setThresholdSaving]  = useState(false)
+  const [retentionSaved,   setRetentionSaved]   = useState(false)
+  const [retentionSaving,  setRetentionSaving]  = useState(false)
 
   if (!activeApp) return <p className="text-slate-400 p-8">Loading…</p>
 
   async function saveThresholds() {
-    setSaving(true)
+    setThresholdSaving(true)
     try {
-      await api.updateAppSettings(activeApp!.id, {
-        deadThresholdDays: deadDays,
-        dormantThresholdDays: dormantDays,
-        eventRetentionDays: retention,
-      })
+      await api.updateAppSettings(activeApp!.id, { deadThresholdDays: deadDays, dormantThresholdDays: dormantDays })
       await reloadApps()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      setThresholdSaved(true)
+      setTimeout(() => setThresholdSaved(false), 2000)
     } catch {}
-    finally { setSaving(false) }
+    finally { setThresholdSaving(false) }
+  }
+
+  async function saveRetention() {
+    setRetentionSaving(true)
+    try {
+      await api.updateAppSettings(activeApp!.id, { eventRetentionDays: retention })
+      await reloadApps()
+      setRetentionSaved(true)
+      setTimeout(() => setRetentionSaved(false), 2000)
+    } catch {}
+    finally { setRetentionSaving(false) }
   }
 
   return (
@@ -205,13 +215,13 @@ export default function Settings() {
         </div>
         <div className="mt-5 flex items-center gap-3">
           <button
-            onClick={saveThresholds} disabled={saving}
+            onClick={saveThresholds} disabled={thresholdSaving}
             className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
             style={{ padding: '8px 18px', fontSize: 13 }}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {thresholdSaving ? 'Saving…' : 'Save'}
           </button>
-          {saved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
+          {thresholdSaved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
         </div>
       </div>
 
@@ -228,13 +238,13 @@ export default function Settings() {
         />
         <div className="mt-5 flex items-center gap-3">
           <button
-            onClick={saveThresholds} disabled={saving}
+            onClick={saveRetention} disabled={retentionSaving}
             className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
             style={{ padding: '8px 18px', fontSize: 13 }}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {retentionSaving ? 'Saving…' : 'Save'}
           </button>
-          {saved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
+          {retentionSaved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
         </div>
       </div>
 
