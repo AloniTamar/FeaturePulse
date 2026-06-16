@@ -25,25 +25,59 @@ export default function Transitions() {
   const { setActions }             = useTopbar()
   const { cronState, runCron }     = useCron(appId)
 
+  async function exportCSV() {
+    const params: Record<string, string> = { page: '1', limit: '9999', sort }
+    if (toState) params['toState'] = toState
+    const res = await api.getTransitions(appId, params)
+    const rows = [
+      ['feature', 'screen', 'from_state', 'to_state', 'changed_at', 'reason'],
+      ...res.data.map(t => [
+        t.feature.resourceName ?? '(unnamed)',
+        t.feature.screenName,
+        t.oldState ?? 'new',
+        t.newState,
+        t.changedAt,
+        t.reason ?? '',
+      ]),
+    ]
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = `transitions${toState ? `-${toState.toLowerCase()}` : ''}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   useEffect(() => {
     setActions(
-      <button
-        onClick={runCron}
-        disabled={cronState === 'loading'}
-        className={`border font-semibold rounded-lg transition-colors ${
-          cronState === 'ok'
-            ? 'border-green-300 bg-green-50 text-green-600'
-            : cronState === 'error'
-            ? 'border-red-300 bg-red-50 text-red-600'
-            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-        }`}
-        style={{ padding: '6px 13px', fontSize: 12.5 }}
-      >
-        {cronState === 'loading' ? 'Running…' : cronState === 'ok' ? '✓ Done' : cronState === 'error' ? 'Error' : 'Run Cron Now'}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={runCron}
+          disabled={cronState === 'loading'}
+          className={`border font-semibold rounded-lg transition-colors ${
+            cronState === 'ok'
+              ? 'border-green-300 bg-green-50 text-green-600'
+              : cronState === 'error'
+              ? 'border-red-300 bg-red-50 text-red-600'
+              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+          }`}
+          style={{ padding: '6px 13px', fontSize: 12.5 }}
+        >
+          {cronState === 'loading' ? 'Running…' : cronState === 'ok' ? '✓ Done' : cronState === 'error' ? 'Error' : 'Run Cron Now'}
+        </button>
+        <button
+          onClick={exportCSV}
+          className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold rounded-lg transition-colors"
+          style={{ padding: '6px 13px', fontSize: 12.5 }}
+        >
+          Export CSV
+        </button>
+      </div>
     )
     return () => setActions(null)
-  }, [setActions, appId, cronState, runCron])
+  }, [setActions, appId, cronState, runCron, toState, sort])
 
   useEffect(() => { if (cronState === 'ok') load(1) }, [cronState])
 

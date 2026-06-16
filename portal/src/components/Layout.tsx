@@ -220,6 +220,9 @@ function Topbar({ lastSynced }: { lastSynced: Date | null }) {
   const lastSegment = segments[segments.length - 1]
   const pageLabel = PAGE_LABELS[location.pathname] ?? PAGE_LABELS[lastSegment] ?? 'Detail'
 
+  const ANALYTICS_PAGES = new Set(['dashboard', 'features', 'transitions'])
+  const showSynced = lastSynced && segments.length === 3 && ANALYTICS_PAGES.has(segments[2])
+
   // suppress unused warning — appId drives activeApp via AppContext
   void appId
 
@@ -236,7 +239,7 @@ function Topbar({ lastSynced }: { lastSynced: Date | null }) {
       )}
       <span className="text-slate-700 font-semibold" style={{ fontSize: 13 }}>{pageLabel}</span>
       <div className="ml-auto flex items-center gap-2.5">
-        {lastSynced && (
+        {showSynced && (
           <div
             className="flex items-center gap-1.5 bg-green-100 text-green-600 font-medium rounded-full px-3 py-1"
             style={{ fontSize: 12 }}
