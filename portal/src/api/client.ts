@@ -55,6 +55,16 @@ export const api = {
   deleteApp: (appId: string) =>
     request<void>(`/apps/${appId}`, { method: 'DELETE' }),
 
+  updateAppSettings: (appId: string, settings: Partial<AppSettings> & { name?: string }) =>
+    request<AppSummary>(`/apps/${appId}`, { method: 'PATCH', body: JSON.stringify(settings) }),
+
+  getTransitions: (appId: string, params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request<{ data: TransitionRecord[]; pagination: Pagination }>(
+      `/apps/${appId}/transitions${qs ? `?${qs}` : ''}`
+    )
+  },
+
   getDashboard: (appId: string) =>
     request<{ counts: Record<string, number>; recentTransitions: unknown[] }>(`/apps/${appId}/dashboard`),
 
@@ -89,6 +99,9 @@ export interface AppSummary {
   apiKey: string
   createdAt: string
   featureCount: number
+  deadThresholdDays: number
+  dormantThresholdDays: number
+  eventRetentionDays: number
 }
 
 export interface Feature {
@@ -105,3 +118,18 @@ export interface TimelineRow {
 
 export interface Pagination { page: number; limit: number; total: number }
 export interface TrendPoint { date: string; avgInteractionRate: number }
+
+export interface TransitionRecord {
+  id: number
+  oldState: string | null
+  newState: string
+  changedAt: string
+  reason: string | null
+  feature: { id: string; resourceName: string | null; screenName: string }
+}
+
+export interface AppSettings {
+  deadThresholdDays: number
+  dormantThresholdDays: number
+  eventRetentionDays: number
+}
