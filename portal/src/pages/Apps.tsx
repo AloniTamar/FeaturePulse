@@ -23,64 +23,97 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function DeleteModal({ app, onClose, onDeleted }: { app: AppSummary; onClose: () => void; onDeleted: () => void }) {
-  const [confirm, setConfirm] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [confirm,   setConfirm]   = useState('')
+  const [showFinal, setShowFinal] = useState(false)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState('')
   const matches = confirm === app.name
 
   async function handleDelete() {
-    if (!matches) return
     setLoading(true)
     try {
       await api.deleteApp(app.id)
       onDeleted()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete')
+      setShowFinal(false)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-        <h2 className="text-slate-900 font-bold mb-2" style={{ fontSize: 16 }}>
-          Delete "{app.name}"?
-        </h2>
-        <p className="text-slate-500 mb-4" style={{ fontSize: 13 }}>
-          This permanently deletes the app and all its features, events, and data. This cannot be undone.
-        </p>
-        <p className="text-slate-700 font-semibold mb-2" style={{ fontSize: 13 }}>
-          Type <span className="font-mono bg-slate-100 px-1 rounded">{app.name}</span> to confirm:
-        </p>
-        <input
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          placeholder={app.name}
-          autoFocus
-          className="w-full border border-red-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4 transition-colors"
-          style={{ padding: '10px 14px', fontSize: 14 }}
-        />
-        {error && <p className="text-red-600 mb-3" style={{ fontSize: 13 }}>{error}</p>}
-        <div className="flex gap-2 justify-end">
-          <button
-            type="button" onClick={onClose}
-            className="border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
-            style={{ padding: '8px 16px', fontSize: 13 }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={!matches || loading}
-            className="bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
-            style={{ padding: '8px 16px', fontSize: 13 }}
-          >
-            {loading ? 'Deleting…' : 'Delete App'}
-          </button>
+    <>
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+          <h2 className="text-slate-900 font-bold mb-2" style={{ fontSize: 16 }}>
+            Delete "{app.name}"?
+          </h2>
+          <p className="text-slate-500 mb-4" style={{ fontSize: 13 }}>
+            This permanently deletes the app and all its features, events, and data. This cannot be undone.
+          </p>
+          <p className="text-slate-700 font-semibold mb-2" style={{ fontSize: 13 }}>
+            Type <span className="font-mono bg-slate-100 px-1 rounded">{app.name}</span> to confirm:
+          </p>
+          <input
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder={app.name}
+            autoFocus
+            className="w-full border border-red-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4 transition-colors"
+            style={{ padding: '10px 14px', fontSize: 14 }}
+          />
+          {error && <p className="text-red-600 mb-3" style={{ fontSize: 13 }}>{error}</p>}
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button" onClick={onClose}
+              className="border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+              style={{ padding: '8px 16px', fontSize: 13 }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => setShowFinal(true)}
+              disabled={!matches}
+              className="bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
+              style={{ padding: '8px 16px', fontSize: 13 }}
+            >
+              Delete App
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {showFinal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-slate-900 font-bold mb-3" style={{ fontSize: 16 }}>
+              Are you absolutely sure?
+            </h2>
+            <p className="text-slate-500 mb-5" style={{ fontSize: 13 }}>
+              This is permanent. All features, events, and aggregates for <strong>{app.name}</strong> will be destroyed and cannot be recovered.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowFinal(false)}
+                className="border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+                style={{ padding: '8px 16px', fontSize: 13 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
+                style={{ padding: '8px 16px', fontSize: 13 }}
+              >
+                {loading ? 'Deleting…' : 'Yes, delete forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -111,11 +144,16 @@ function AppCard({ app, onRenamed, onDeleted, onOpen }: {
     }
   }
 
+  function stopProp(e: React.MouseEvent) { e.stopPropagation() }
+
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col gap-3">
+      <div
+        onClick={onOpen}
+        className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
+      >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3" onClick={stopProp}>
           <div className="flex-1 min-w-0">
             {editing ? (
               <input
@@ -132,7 +170,7 @@ function AppCard({ app, onRenamed, onDeleted, onOpen }: {
               <div className="flex items-center gap-2">
                 <span className="text-slate-900 font-bold truncate" style={{ fontSize: 15 }}>{app.name}</span>
                 <button
-                  onClick={() => setEditing(true)}
+                  onClick={(e) => { stopProp(e); setEditing(true) }}
                   className="text-slate-300 hover:text-slate-500 transition-colors flex-shrink-0"
                   title="Rename"
                 >
@@ -144,33 +182,26 @@ function AppCard({ app, onRenamed, onDeleted, onOpen }: {
             )}
             <div className="font-mono text-slate-400 mt-0.5 truncate" style={{ fontSize: 11.5 }}>{app.packageName}</div>
           </div>
-          <button
-            onClick={onOpen}
-            className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0"
-            style={{ padding: '6px 14px', fontSize: 12.5 }}
-          >
-            Open
-          </button>
         </div>
 
         {/* API Key */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2">
+        <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2" onClick={stopProp}>
           <span className="font-mono text-slate-600 flex-1 truncate" style={{ fontSize: 11.5 }}>
             {masked ? maskedKey : app.apiKey}
           </span>
-          <button onClick={() => setMasked(m => !m)} className="text-slate-400 hover:text-slate-600 transition-colors" style={{ fontSize: 11 }}>
+          <button onClick={(e) => { stopProp(e); setMasked(m => !m) }} className="text-slate-400 hover:text-slate-600 transition-colors" style={{ fontSize: 11 }}>
             {masked ? 'Show' : 'Hide'}
           </button>
-          <CopyButton text={app.apiKey} />
+          <div onClick={stopProp}><CopyButton text={app.apiKey} /></div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" onClick={stopProp}>
           <span className="text-slate-400" style={{ fontSize: 11.5 }}>
             {app.featureCount} features · Created {new Date(app.createdAt).toLocaleDateString()}
           </span>
           <button
-            onClick={() => setDelete(true)}
+            onClick={(e) => { stopProp(e); setDelete(true) }}
             className="text-red-400 hover:text-red-600 font-semibold transition-colors"
             style={{ fontSize: 12 }}
           >
