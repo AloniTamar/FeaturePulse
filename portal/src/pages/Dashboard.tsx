@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Feature, TrendPoint } from '../api/client'
@@ -9,6 +9,8 @@ import DonutChart from '../components/DonutChart'
 import DeadFeaturesList from '../components/DeadFeaturesList'
 import { useTopbar } from '../components/TopbarContext'
 import { COLORS } from '../design-tokens'
+import { useCron } from '../hooks/useCron'
+import { useApp } from '../context/AppContext'
 
 interface RecentTransition {
   id: number; oldState: string; newState: string; changedAt: string
@@ -67,54 +69,12 @@ export default function Dashboard() {
   const { appId = '' } = useParams<{ appId: string }>()
   const nav = useNavigate()
   const { setActions } = useTopbar()
+  const { activeApp } = useApp()
+  const { cronState, runCron } = useCron(appId)
   const [data, setData]         = useState<DashboardData | null>(null)
   const [deadFeatures, setDead] = useState<Feature[]>([])
   const [trend, setTrend]       = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] })
   const [error, setError]       = useState('')
-  const [cronState, setCronState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
-
-  // Track mount status to avoid setState after unmount in the cron timer
-  const mountedRef = useRef(true)
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  const runCron = useCallback(async () => {
-    if (cronState === 'loading') return
-    setCronState('loading')
-    const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-    const token = localStorage.getItem('fp_token')
-    try {
-      const res = await fetch(`${BASE}/api/v1/cron`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token ?? ''}` },
-      })
-      if (!res.ok) throw new Error('failed')
-      setCronState('ok')
-      // Refresh dashboard counts to reflect the new aggregation
-      api.getDashboard(appId)
-        .then((d) => setData(d as DashboardData))
-        .catch(() => {})
-      // Refresh trend chart — cron generates new DailyAggregate rows
-      api.getTrend(appId, 30)
-        .then((trendRows) => {
-          if (trendRows.length > 0) {
-            setTrend({
-              labels: trendRows.map(r =>
-                new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              ),
-              data: trendRows.map(r => +(r.avgInteractionRate * 100).toFixed(1)),
-            })
-          }
-        })
-        .catch(() => {})
-    } catch {
-      setCronState('error')
-    } finally {
-      setTimeout(() => { if (mountedRef.current) setCronState('idle') }, 3000)
-    }
-  }, [cronState, appId])
 
   // Effect 1: load data once on mount
   useEffect(() => {
@@ -178,7 +138,7 @@ export default function Dashboard() {
             const blob = await res.blob()
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
-            a.href = url; a.download = 'features.csv'; a.click()
+            a.href = url; a.download = `${activeApp?.name ?? appId}-features.csv`; a.click()
             URL.revokeObjectURL(url)
           }}
           className="bg-indigo-600 text-white hover:bg-indigo-700 font-semibold rounded-lg transition-colors"
@@ -189,7 +149,25 @@ export default function Dashboard() {
       </div>
     )
     return () => setActions(null)
-  }, [nav, setActions, runCron, cronState, appId])
+  }, [nav, setActions, runCron, cronState, appId, activeApp])
+
+  // Effect 3: refresh data when cron completes
+  useEffect(() => {
+    if (cronState !== 'ok') return
+    api.getDashboard(appId)
+      .then((d) => setData(d as DashboardData))
+      .catch(() => {})
+    api.getTrend(appId, 30)
+      .then((trendRows) => {
+        if (trendRows.length > 0) {
+          setTrend({
+            labels: trendRows.map(r => new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+            data:   trendRows.map(r => +(r.avgInteractionRate * 100).toFixed(1)),
+          })
+        }
+      })
+      .catch(() => {})
+  }, [cronState, appId])
 
   async function handleIgnore(id: string, ignore: boolean) {
     await api.ignoreFeature(id, ignore)
@@ -309,7 +287,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-card border border-slate-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Recent State Changes</p>
-            <Link to={`/apps/${appId}/features`} className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
+            <Link to={`/apps/${appId}/transitions`} className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
               View all transitions
             </Link>
           </div>
@@ -360,7 +338,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-card border border-slate-200">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>Dead Features</p>
-            <Link to={`/apps/${appId}/features`} className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
+            <Link to={`/apps/${appId}/features?state=DEAD`} className="text-indigo-600 font-semibold hover:underline" style={{ fontSize: 12 }}>
               Manage all
             </Link>
           </div>
