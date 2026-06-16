@@ -153,13 +153,14 @@ function AppCard({ app, onRenamed, onDeleted, onOpen }: {
         className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
       >
         {/* Header */}
-        <div className="flex items-start gap-3" onClick={stopProp}>
+        <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             {editing ? (
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={saveRename}
+                onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => { if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') { setName(app.name); setEditing(false) } }}
                 autoFocus
                 disabled={saving}
@@ -189,10 +190,10 @@ function AppCard({ app, onRenamed, onDeleted, onOpen }: {
           <span className="font-mono text-slate-600 flex-1 truncate" style={{ fontSize: 11.5 }}>
             {masked ? maskedKey : app.apiKey}
           </span>
-          <button onClick={(e) => { stopProp(e); setMasked(m => !m) }} className="text-slate-400 hover:text-slate-600 transition-colors" style={{ fontSize: 11 }}>
+          <button onClick={(e) => { stopProp(e); setMasked(m => !m) }} className="text-slate-400 hover:text-slate-600 transition-colors" style={{ fontSize: 11, padding: '2px 6px' }}>
             {masked ? 'Show' : 'Hide'}
           </button>
-          <div onClick={stopProp}><CopyButton text={app.apiKey} /></div>
+          <CopyButton text={app.apiKey} />
         </div>
 
         {/* Footer */}

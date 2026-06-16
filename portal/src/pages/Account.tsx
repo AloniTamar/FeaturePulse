@@ -73,7 +73,7 @@ export default function Account() {
     try {
       await api.deleteAccount()
       clearToken()
-      nav('/login')
+      window.location.href = '/login'
     } catch (err) {
       setDelError(err instanceof Error ? err.message : 'Failed to delete account')
       setShowFinalModal(false)

@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import FilterPills from '../components/FilterPills'
 import StateBadge from '../components/StateBadge'
+import { useTopbar } from '../components/TopbarContext'
+import { useCron } from '../hooks/useCron'
 import type { TransitionRecord, Pagination, Feature } from '../api/client'
 
 function formatRelativeTime(iso: string): string {
@@ -19,6 +21,31 @@ export default function Transitions() {
   const [toState, setToState]         = useState('')
   const [sort, setSort]               = useState('desc')
   const [loading, setLoading]         = useState(false)
+
+  const { setActions }             = useTopbar()
+  const { cronState, runCron }     = useCron(appId)
+
+  useEffect(() => {
+    setActions(
+      <button
+        onClick={runCron}
+        disabled={cronState === 'loading'}
+        className={`border font-semibold rounded-lg transition-colors ${
+          cronState === 'ok'
+            ? 'border-green-300 bg-green-50 text-green-600'
+            : cronState === 'error'
+            ? 'border-red-300 bg-red-50 text-red-600'
+            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+        }`}
+        style={{ padding: '6px 13px', fontSize: 12.5 }}
+      >
+        {cronState === 'loading' ? 'Running…' : cronState === 'ok' ? '✓ Done' : cronState === 'error' ? 'Error' : 'Run Cron Now'}
+      </button>
+    )
+    return () => setActions(null)
+  }, [setActions, appId, cronState, runCron])
+
+  useEffect(() => { if (cronState === 'ok') load(1) }, [cronState])
 
   async function load(page = 1) {
     setLoading(true)

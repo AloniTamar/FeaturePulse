@@ -78,10 +78,10 @@ const PAGE_LABELS: Record<string, string> = {
 }
 
 function NavItem({
-  to, label, Icon, badgeCount = 0, badgeColor = 'red', disabled = false,
+  to, label, Icon, badgeCount = 0, badgeColor = 'red', disabled = false, end = false,
 }: {
   to: string; label: string; Icon: FC<{ className?: string }>
-  badgeCount?: number; badgeColor?: 'red' | 'amber'; disabled?: boolean
+  badgeCount?: number; badgeColor?: 'red' | 'amber'; disabled?: boolean; end?: boolean
 }) {
   if (disabled) {
     return (
@@ -97,6 +97,7 @@ function NavItem({
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) =>
         `flex items-center gap-2.5 px-2.5 py-2 rounded-lg mb-px no-underline transition-colors ${
           isActive
@@ -297,7 +298,7 @@ function Sidebar({ deadCount }: { deadCount: number }) {
         <p className="uppercase text-slate-400 font-bold px-2 mb-1 mt-3" style={{ fontSize: 10, letterSpacing: '0.09em' }}>
           Global
         </p>
-        <NavItem to="/apps"    label="Apps"    Icon={AppsIcon} />
+        <NavItem to="/apps"    label="Apps"    Icon={AppsIcon} end />
         <NavItem to="/account" label="Account" Icon={PersonIcon} />
         <NavItem to="/docs"    label="Docs"    Icon={DocIcon} />
       </nav>
