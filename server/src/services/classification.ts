@@ -43,15 +43,17 @@ export function calculateDecayRate(weeklyRates: number[]): number {
   return (prev - curr) / prev
 }
 
-/** Database-bound — reads 14 days of aggregates and classifies one feature */
+/** Database-bound — reads aggregate days dynamically based on dormantWeeks and classifies one feature */
 export async function classifyFeature(
   featureId: string,
   thresholds: { deadDays: number; dormantWeeks: number } = { deadDays: 30, dormantWeeks: 2 }
 ): Promise<FeatureState> {
+  const bucketCount = Math.max(2, thresholds.dormantWeeks)
+
   const agg = await prisma.dailyAggregate.findMany({
     where: { featureId },
     orderBy: { date: 'desc' },
-    take: 14,
+    take: bucketCount * 7,
   })
 
   if (agg.length === 0) return 'THRIVING'
@@ -63,13 +65,11 @@ export async function classifyFeature(
 
   // agg is DESC order (most recent first); reverse to get oldest-first for bucketing
   const ascending = [...agg].reverse()
-  const weeklyRates: WeeklyRate[] = [0, 1]
-    .map(w => {
-      const slice = ascending.slice(w * 7, (w + 1) * 7)
-      if (slice.length === 0) return null
-      return { week: w + 1, rate: slice.reduce((s, r) => s + r.interactionRate, 0) / slice.length }
-    })
-    .filter((w): w is WeeklyRate => w !== null)
+  const weeklyRates: WeeklyRate[] = Array.from({ length: bucketCount }, (_, w) => {
+    const slice = ascending.slice(w * 7, (w + 1) * 7)
+    if (slice.length === 0) return null
+    return { week: w + 1, rate: slice.reduce((s, r) => s + r.interactionRate, 0) / slice.length }
+  }).filter((w): w is WeeklyRate => w !== null)
 
   return determineState(agg[0]?.interactionRate ?? 0, weeklyRates, daysSince, thresholds)
 }

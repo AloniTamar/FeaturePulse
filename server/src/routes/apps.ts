@@ -144,6 +144,13 @@ appsRouter.put('/:appId/config', jwtAuth, async (req: AuthRequest, res) => {
   }
 })
 
+const SORT_MAP: Record<string, object> = {
+  lastInteraction_desc: { lastInteraction: 'desc' },
+  lastInteraction_asc:  { lastInteraction: 'asc'  },
+  name_asc:             { resourceName:    'asc'   },
+  interactionRate_desc: { dailyAggregates: { _avg: { interactionRate: 'desc' } } },
+}
+
 // GET /api/v1/apps/:appId/features
 appsRouter.get('/:appId/features', jwtAuth, async (req: AuthRequest, res) => {
   try {
@@ -151,12 +158,6 @@ appsRouter.get('/:appId/features', jwtAuth, async (req: AuthRequest, res) => {
     if (!owned) return
 
     const { appId } = req.params
-    const SORT_MAP: Record<string, object> = {
-      lastInteraction_desc: { lastInteraction: 'desc' },
-      lastInteraction_asc:  { lastInteraction: 'asc'  },
-      name_asc:             { resourceName:    'asc'   },
-      interactionRate_desc: { dailyAggregates: { _avg: { interactionRate: 'desc' } } },
-    }
     const { state, screen, page = '1', limit = '20', sort = 'lastInteraction_desc' } = req.query
     const orderBy = SORT_MAP[sort as string] ?? SORT_MAP['lastInteraction_desc']
     const where: Record<string, unknown> = { appId }
@@ -196,7 +197,8 @@ appsRouter.get('/:appId/export', jwtAuth, async (req: AuthRequest, res) => {
          csvEscape(f.screenName), csvEscape(f.state), csvEscape(f.lastInteraction?.toISOString() ?? '')].join(',')
       ).join('\n')
       res.setHeader('Content-Type', 'text/csv')
-      res.setHeader('Content-Disposition', `attachment; filename="${owned.name}-features.csv"`)
+      const safeName = owned.name.replace(/[^\w\-]/g, '_')
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}-features.csv"`)
       return res.send(header + rows)
     }
     res.json(features)
