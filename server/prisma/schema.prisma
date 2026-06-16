@@ -25,6 +25,9 @@ model App {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   config      Json     @default("{}")
+  deadThresholdDays     Int @default(30)
+  dormantThresholdDays  Int @default(14)
+  eventRetentionDays    Int @default(7)
   features    Feature[]
   rawEvents   RawEvent[]
 }

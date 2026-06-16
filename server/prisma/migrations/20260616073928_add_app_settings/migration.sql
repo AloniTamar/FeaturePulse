@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "App" ADD COLUMN     "deadThresholdDays" INTEGER NOT NULL DEFAULT 30,
+ADD COLUMN     "dormantThresholdDays" INTEGER NOT NULL DEFAULT 14,
+ADD COLUMN     "eventRetentionDays" INTEGER NOT NULL DEFAULT 7;
