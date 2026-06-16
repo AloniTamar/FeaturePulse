@@ -60,6 +60,7 @@ function RenameDeleteCard({ app, onRenamed, onDeleted }: {
     try {
       await api.deleteApp(app.id)
       onDeleted()
+      localStorage.removeItem('fp_last_app_id')
       nav('/apps')
     } catch (err) {
       setDelError(err instanceof Error ? err.message : 'Failed to delete')

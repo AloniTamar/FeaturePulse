@@ -148,7 +148,6 @@ const SORT_MAP: Record<string, object> = {
   lastInteraction_desc: { lastInteraction: 'desc' },
   lastInteraction_asc:  { lastInteraction: 'asc'  },
   name_asc:             { resourceName:    'asc'   },
-  interactionRate_desc: { dailyAggregates: { _avg: { interactionRate: 'desc' } } },
 }
 
 // GET /api/v1/apps/:appId/features

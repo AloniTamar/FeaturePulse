@@ -5,6 +5,7 @@ export function setToken(t: string) { localStorage.setItem('fp_token', t) }
 export function clearToken() {
   localStorage.removeItem('fp_token')
   localStorage.removeItem('fp_email')
+  localStorage.removeItem('fp_last_app_id')
 }
 export function isLoggedIn() { return !!getToken() }
 

@@ -12,7 +12,6 @@ const SORT_OPTIONS = [
   { value: 'lastInteraction_desc', label: 'Last interaction — newest' },
   { value: 'lastInteraction_asc',  label: 'Last interaction — oldest' },
   { value: 'name_asc',             label: 'Name (A → Z)' },
-  { value: 'interactionRate_desc', label: 'Interaction rate — highest' },
 ]
 
 export default function Features() {
@@ -44,6 +43,10 @@ export default function Features() {
   }
 
   useEffect(() => { load(1) }, [stateFilter, sort, appId])
+
+  useEffect(() => {
+    if (cronState === 'ok') load(1)
+  }, [cronState])
 
   function handleFilterChange(v: string) {
     setStateFilter(v)
