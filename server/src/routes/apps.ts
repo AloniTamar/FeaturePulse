@@ -49,6 +49,9 @@ appsRouter.get('/', jwtAuth, async (req: AuthRequest, res) => {
       apiKey: a.apiKey,
       createdAt: a.createdAt,
       featureCount: a._count.features,
+      deadThresholdDays:    a.deadThresholdDays,
+      dormantThresholdDays: a.dormantThresholdDays,
+      eventRetentionDays:   a.eventRetentionDays,
     })))
   } catch {
     res.status(500).json({ error: 'Internal server error' })
@@ -81,25 +84,33 @@ appsRouter.post('/', jwtAuth, async (req: AuthRequest, res) => {
   }
 })
 
-// PATCH /api/v1/apps/:appId — rename
-const RenameSchema = z.object({ name: z.string().min(1) })
+// PATCH /api/v1/apps/:appId — rename or update settings
+const UpdateAppSchema = z.object({
+  name:                z.string().min(1).optional(),
+  deadThresholdDays:   z.number().int().min(1).max(365).optional(),
+  dormantThresholdDays:z.number().int().min(1).max(365).optional(),
+  eventRetentionDays:  z.number().int().min(1).max(365).optional(),
+})
 
 appsRouter.patch('/:appId', jwtAuth, async (req: AuthRequest, res) => {
   try {
     const owned = await requireOwnership(req, res, req.params.appId)
     if (!owned) return
 
-    const result = RenameSchema.safeParse(req.body)
+    const result = UpdateAppSchema.safeParse(req.body)
     if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
     const updated = await prisma.app.update({
       where: { id: req.params.appId },
-      data: { name: result.data.name },
+      data: result.data,
       include: { _count: { select: { features: true } } },
     })
     res.json({
       id: updated.id, name: updated.name, packageName: updated.packageName,
       apiKey: updated.apiKey, createdAt: updated.createdAt, featureCount: updated._count.features,
+      deadThresholdDays: updated.deadThresholdDays,
+      dormantThresholdDays: updated.dormantThresholdDays,
+      eventRetentionDays: updated.eventRetentionDays,
     })
   } catch {
     res.status(500).json({ error: 'Internal server error' })
@@ -140,14 +151,21 @@ appsRouter.get('/:appId/features', jwtAuth, async (req: AuthRequest, res) => {
     if (!owned) return
 
     const { appId } = req.params
-    const { state, screen, page = '1', limit = '20' } = req.query
+    const SORT_MAP: Record<string, object> = {
+      lastInteraction_desc: { lastInteraction: 'desc' },
+      lastInteraction_asc:  { lastInteraction: 'asc'  },
+      name_asc:             { resourceName:    'asc'   },
+      interactionRate_desc: { dailyAggregates: { _avg: { interactionRate: 'desc' } } },
+    }
+    const { state, screen, page = '1', limit = '20', sort = 'lastInteraction_desc' } = req.query
+    const orderBy = SORT_MAP[sort as string] ?? SORT_MAP['lastInteraction_desc']
     const where: Record<string, unknown> = { appId }
     if (state)  where.state = state
     if (screen) where.screenName = screen
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string)
     const [features, total] = await Promise.all([
-      prisma.feature.findMany({ where, skip, take: parseInt(limit as string), orderBy: { lastInteraction: 'desc' } }),
+      prisma.feature.findMany({ where, skip, take: parseInt(limit as string), orderBy }),
       prisma.feature.count({ where }),
     ])
     res.json({
@@ -178,7 +196,7 @@ appsRouter.get('/:appId/export', jwtAuth, async (req: AuthRequest, res) => {
          csvEscape(f.screenName), csvEscape(f.state), csvEscape(f.lastInteraction?.toISOString() ?? '')].join(',')
       ).join('\n')
       res.setHeader('Content-Type', 'text/csv')
-      res.setHeader('Content-Disposition', 'attachment; filename="features.csv"')
+      res.setHeader('Content-Disposition', `attachment; filename="${owned.name}-features.csv"`)
       return res.send(header + rows)
     }
     res.json(features)

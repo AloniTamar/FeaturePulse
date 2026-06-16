@@ -12,13 +12,17 @@ export interface WeeklyRate {
 export function determineState(
   currentRate: number,
   weeklyRates: WeeklyRate[],
-  daysSinceLastInteraction: number | null
+  daysSinceLastInteraction: number | null,
+  thresholds: { deadDays: number; dormantWeeks: number } = { deadDays: 30, dormantWeeks: 2 }
 ): FeatureState {
-  // DEAD: zero interactions for 30+ consecutive days
-  if (daysSinceLastInteraction !== null && daysSinceLastInteraction >= 30) return 'DEAD'
+  // DEAD: zero interactions for deadDays+ consecutive days
+  if (daysSinceLastInteraction !== null && daysSinceLastInteraction >= thresholds.deadDays) return 'DEAD'
 
-  // DORMANT: rate < 1% sustained across last 2 weekly buckets (14+ days)
-  if (weeklyRates.length >= 2 && weeklyRates.slice(-2).every(w => w.rate < 0.01)) return 'DORMANT'
+  // DORMANT: rate < 1% sustained across last dormantWeeks weekly buckets
+  if (
+    weeklyRates.length >= thresholds.dormantWeeks &&
+    weeklyRates.slice(-thresholds.dormantWeeks).every(w => w.rate < 0.01)
+  ) return 'DORMANT'
 
   // DECLINING: rate dropped >20% week-over-week
   if (weeklyRates.length >= 2) {
@@ -40,7 +44,10 @@ export function calculateDecayRate(weeklyRates: number[]): number {
 }
 
 /** Database-bound — reads 14 days of aggregates and classifies one feature */
-export async function classifyFeature(featureId: string): Promise<FeatureState> {
+export async function classifyFeature(
+  featureId: string,
+  thresholds: { deadDays: number; dormantWeeks: number } = { deadDays: 30, dormantWeeks: 2 }
+): Promise<FeatureState> {
   const agg = await prisma.dailyAggregate.findMany({
     where: { featureId },
     orderBy: { date: 'desc' },
@@ -64,5 +71,5 @@ export async function classifyFeature(featureId: string): Promise<FeatureState> 
     })
     .filter((w): w is WeeklyRate => w !== null)
 
-  return determineState(agg[0]?.interactionRate ?? 0, weeklyRates, daysSince)
+  return determineState(agg[0]?.interactionRate ?? 0, weeklyRates, daysSince, thresholds)
 }

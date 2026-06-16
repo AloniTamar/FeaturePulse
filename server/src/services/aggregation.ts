@@ -36,30 +36,39 @@ export async function runNightlyAggregation(): Promise<void> {
   const yesterday = new Date()
   yesterday.setUTCDate(yesterday.getUTCDate() - 1)
 
-  const apps = await prisma.app.findMany({ select: { id: true } })
+  const apps = await prisma.app.findMany({
+    select: { id: true, eventRetentionDays: true },
+  })
 
   for (const app of apps) {
     await aggregateDay(app.id, yesterday)
     await classifyAllFeatures(app.id)
+
+    const retentionDays = app.eventRetentionDays ?? 7
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
+    await prisma.rawEvent.deleteMany({ where: { appId: app.id, timestamp: { lt: cutoff } } })
   }
 
-  // Raw events TTL: delete anything older than 7 days
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  const deleted = await prisma.rawEvent.deleteMany({ where: { timestamp: { lt: cutoff } } })
-  console.log(`[Cron] Done. Deleted ${deleted.count} expired raw events.`)
+  console.log('[Cron] Done.')
 }
 
 async function classifyAllFeatures(appId: string): Promise<void> {
+  const app = await prisma.app.findUnique({ where: { id: appId } })
+  const thresholds = {
+    deadDays:    app?.deadThresholdDays    ?? 30,
+    dormantWeeks: Math.ceil((app?.dormantThresholdDays ?? 14) / 7),
+  }
+
   const features = await prisma.feature.findMany({ where: { appId, isIgnored: false } })
 
   for (const feature of features) {
-    const newState = await classifyFeature(feature.id)
+    const newState = await classifyFeature(feature.id, thresholds)
     if (newState !== feature.state) {
       await prisma.feature.update({ where: { id: feature.id }, data: { state: newState } })
       await prisma.stateTransition.create({
         data: {
           featureId: feature.id,
-          oldState: feature.state,
+          oldState:  feature.state,
           newState,
           reason: `Automated classification on ${new Date().toISOString().slice(0, 10)}`,
         },

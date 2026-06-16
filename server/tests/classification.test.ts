@@ -40,6 +40,16 @@ describe('determineState', () => {
     const rates = [{ week: 1, rate: 0.002 }, { week: 2, rate: 0.001 }]
     expect(determineState(0.001, rates, 20)).toBe('DORMANT')
   })
+
+  test('DEAD threshold is configurable — 10 days with custom threshold', () => {
+    expect(determineState(0, [], 10, { deadDays: 10, dormantWeeks: 2 })).toBe('DEAD')
+    expect(determineState(0, [], 9,  { deadDays: 10, dormantWeeks: 2 })).not.toBe('DEAD')
+  })
+
+  test('DORMANT threshold is configurable — 1 week with custom threshold', () => {
+    const rates = [{ week: 1, rate: 0.005 }]
+    expect(determineState(0.005, rates, 5, { deadDays: 30, dormantWeeks: 1 })).toBe('DORMANT')
+  })
 })
 
 describe('calculateDecayRate', () => {

@@ -97,6 +97,75 @@ describe('App CRUD', () => {
   })
 })
 
+describe('GET /apps/:appId/features — sort param', () => {
+  let token: string
+  let appId: string
+
+  beforeEach(async () => {
+    const user = await prisma.user.create({ data: { email: 'sort@test.com', passwordHash: 'x' } })
+    token = makeToken(user.id)
+    const a = await prisma.app.create({
+      data: { name: 'S', packageName: 'com.s', apiKey: 'fp_sort', apiKeyHash: 'fp_sort', userId: user.id },
+    })
+    appId = a.id
+    const old = new Date(Date.now() - 10 * 86_400_000)
+    await prisma.feature.createMany({
+      data: [
+        { id: 'f_sort_a', appId, elementType: 'Button', screenName: 'A', resourceName: 'btn_z', lastInteraction: old },
+        { id: 'f_sort_b', appId, elementType: 'Button', screenName: 'B', resourceName: 'btn_a', lastInteraction: new Date() },
+      ],
+    })
+  })
+
+  it('sorts by name ascending', async () => {
+    const res = await request(app)
+      .get(`/api/v1/apps/${appId}/features?sort=name_asc`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
+    expect(res.body.data[0].resourceName).toBe('btn_a')
+    expect(res.body.data[1].resourceName).toBe('btn_z')
+  })
+
+  it('sorts by lastInteraction ascending', async () => {
+    const res = await request(app)
+      .get(`/api/v1/apps/${appId}/features?sort=lastInteraction_asc`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
+    expect(res.body.data[0].resourceName).toBe('btn_z')
+  })
+})
+
+describe('PATCH /apps/:appId — settings fields', () => {
+  let token: string
+  let appId: string
+
+  beforeEach(async () => {
+    const user = await prisma.user.create({ data: { email: 'settings@test.com', passwordHash: 'x' } })
+    token = makeToken(user.id)
+    const a = await prisma.app.create({
+      data: { name: 'Set', packageName: 'com.set', apiKey: 'fp_set', apiKeyHash: 'fp_set', userId: user.id },
+    })
+    appId = a.id
+  })
+
+  it('updates deadThresholdDays', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/apps/${appId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ deadThresholdDays: 60 })
+    expect(res.status).toBe(200)
+    expect(res.body.deadThresholdDays).toBe(60)
+  })
+
+  it('rejects out-of-range value', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/apps/${appId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ deadThresholdDays: 0 })
+    expect(res.status).toBe(400)
+  })
+})
+
 describe('GET /apps/:appId/transitions', () => {
   let userId: string
   let token: string
