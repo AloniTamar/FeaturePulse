@@ -2,6 +2,40 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken } from '../api/client'
 
+function FinalDeleteModal({ onConfirm, onCancel, loading }: {
+  onConfirm: () => void; onCancel: () => void; loading: boolean
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h2 className="text-slate-900 font-bold mb-3" style={{ fontSize: 16 }}>
+          Are you absolutely sure?
+        </h2>
+        <p className="text-slate-500 mb-5" style={{ fontSize: 13 }}>
+          This is permanent. All your apps, features, and event data will be destroyed and cannot be recovered.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            className="border border-slate-200 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+            style={{ padding: '8px 16px', fontSize: 13 }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
+            style={{ padding: '8px 16px', fontSize: 13 }}
+          >
+            {loading ? 'Deleting…' : 'Yes, delete forever'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Account() {
   const nav    = useNavigate()
   const email  = localStorage.getItem('fp_email') ?? ''
@@ -12,9 +46,10 @@ export default function Account() {
   const [pwError,    setPwError]    = useState('')
   const [pwLoading,  setPwLoading]  = useState(false)
 
-  const [deleteConfirm, setDeleteConfirm] = useState('')
-  const [deleting,      setDeleting]      = useState(false)
-  const [delError,      setDelError]      = useState('')
+  const [deleteConfirm,  setDeleteConfirm]  = useState('')
+  const [showFinalModal, setShowFinalModal] = useState(false)
+  const [deleting,       setDeleting]       = useState(false)
+  const [delError,       setDelError]       = useState('')
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault()
@@ -33,7 +68,6 @@ export default function Account() {
   }
 
   async function handleDeleteAccount() {
-    if (deleteConfirm !== email) return
     setDeleting(true)
     setDelError('')
     try {
@@ -42,6 +76,7 @@ export default function Account() {
       nav('/login')
     } catch (err) {
       setDelError(err instanceof Error ? err.message : 'Failed to delete account')
+      setShowFinalModal(false)
     } finally {
       setDeleting(false)
     }
@@ -111,14 +146,22 @@ export default function Account() {
         />
         {delError && <p className="text-red-600 mb-2" style={{ fontSize: 13 }}>{delError}</p>}
         <button
-          onClick={handleDeleteAccount}
-          disabled={deleteConfirm !== email || deleting}
+          onClick={() => setShowFinalModal(true)}
+          disabled={deleteConfirm !== email}
           className="bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
           style={{ padding: '9px 20px', fontSize: 13 }}
         >
-          {deleting ? 'Deleting…' : 'Delete My Account'}
+          Delete My Account
         </button>
       </div>
+
+      {showFinalModal && (
+        <FinalDeleteModal
+          loading={deleting}
+          onConfirm={handleDeleteAccount}
+          onCancel={() => setShowFinalModal(false)}
+        />
+      )}
     </div>
   )
 }
