@@ -1,4 +1,14 @@
 // server/src/index.ts
+import * as Sentry from '@sentry/node'
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: 0.1,
+  })
+}
+
 import express from 'express'
 import cors from 'cors'
 import pinoHttp from 'pino-http'
@@ -53,6 +63,13 @@ app.use('/api/v1',          insightsRouter)
 if (process.env.NODE_ENV !== 'test') {
   startCronJobs()
 }
+
+Sentry.setupExpressErrorHandler(app)
+
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err }, 'Unhandled error')
+  res.status(500).json({ error: 'Internal server error' })
+})
 
 const PORT = parseInt(process.env.PORT ?? '3000')
 if (process.env.NODE_ENV !== 'test') {
