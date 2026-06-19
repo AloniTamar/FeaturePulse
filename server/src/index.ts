@@ -5,6 +5,7 @@ import { eventsRouter } from './routes/events'
 import { featuresRouter } from './routes/features'
 import { dashboardRouter } from './routes/dashboard'
 import { analyticsRouter } from './routes/analytics'
+import { insightsRouter } from './routes/insights'
 import { appsRouter } from './routes/apps'
 import { authRouter } from './routes/auth'
 import { startCronJobs } from './cron/nightly'
@@ -33,6 +34,7 @@ app.use('/api/v1/events',   eventsRouter)
 app.use('/api/v1/features', featuresRouter)
 app.use('/api/v1',          dashboardRouter)
 app.use('/api/v1',          analyticsRouter)
+app.use('/api/v1',          insightsRouter)
 
 if (process.env.NODE_ENV !== 'test') {
   startCronJobs()

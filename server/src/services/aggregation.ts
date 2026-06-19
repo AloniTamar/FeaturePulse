@@ -1,5 +1,6 @@
 import { prisma } from '../db/client'
 import { classifyAllFeatures } from './classification'
+import { generateAndSaveInsights } from './insights'
 
 export function getISOWeekStart(date: Date): Date {
   const d = new Date(date)
@@ -140,7 +141,7 @@ export async function runNightlyAggregation(): Promise<void> {
   yesterday.setUTCDate(yesterday.getUTCDate() - 1)
 
   const apps = await prisma.app.findMany({
-    select: { id: true, eventRetentionDays: true },
+    select: { id: true, eventRetentionDays: true, aiInsightsEnabled: true, aiInsightsMode: true },
   })
 
   for (const app of apps) {
@@ -149,6 +150,12 @@ export async function runNightlyAggregation(): Promise<void> {
 
     const cutoff = new Date(Date.now() - (app.eventRetentionDays ?? 7) * 86_400_000)
     await prisma.rawEvent.deleteMany({ where: { appId: app.id, timestamp: { lt: cutoff } } })
+
+    if (app.aiInsightsEnabled && app.aiInsightsMode === 'nightly') {
+      await generateAndSaveInsights(app.id).catch(e =>
+        console.error(`[Cron] AI insights failed for ${app.id}:`, e)
+      )
+    }
   }
 
   console.log('[Cron] Done.')

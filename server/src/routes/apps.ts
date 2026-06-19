@@ -86,10 +86,12 @@ appsRouter.post('/', jwtAuth, async (req: AuthRequest, res) => {
 
 // PATCH /api/v1/apps/:appId — rename or update settings
 const UpdateAppSchema = z.object({
-  name:                z.string().min(1).optional(),
-  deadThresholdDays:   z.number().int().min(1).max(365).optional(),
-  dormantThresholdDays:z.number().int().min(1).max(365).optional(),
-  eventRetentionDays:  z.number().int().min(1).max(365).optional(),
+  name:                 z.string().min(1).optional(),
+  deadThresholdDays:    z.number().int().min(1).max(365).optional(),
+  dormantThresholdDays: z.number().int().min(1).max(365).optional(),
+  eventRetentionDays:   z.number().int().min(1).max(365).optional(),
+  aiInsightsEnabled:    z.boolean().optional(),
+  aiInsightsMode:       z.enum(['nightly', 'on_demand']).optional(),
 })
 
 appsRouter.patch('/:appId', jwtAuth, async (req: AuthRequest, res) => {
@@ -108,9 +110,11 @@ appsRouter.patch('/:appId', jwtAuth, async (req: AuthRequest, res) => {
     res.json({
       id: updated.id, name: updated.name, packageName: updated.packageName,
       apiKey: updated.apiKey, createdAt: updated.createdAt, featureCount: updated._count.features,
-      deadThresholdDays: updated.deadThresholdDays,
+      deadThresholdDays:    updated.deadThresholdDays,
       dormantThresholdDays: updated.dormantThresholdDays,
-      eventRetentionDays: updated.eventRetentionDays,
+      eventRetentionDays:   updated.eventRetentionDays,
+      aiInsightsEnabled:    updated.aiInsightsEnabled,
+      aiInsightsMode:       updated.aiInsightsMode,
     })
   } catch {
     res.status(500).json({ error: 'Internal server error' })
