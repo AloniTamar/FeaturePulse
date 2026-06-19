@@ -14,7 +14,12 @@ import { jwtAuth } from './middleware/auth'
 
 const app = express()
 
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? '*' }))
+const corsOrigin = process.env.CORS_ORIGIN
+if (!corsOrigin && process.env.NODE_ENV === 'production') {
+  console.error('FATAL: CORS_ORIGIN must be set in production')
+  process.exit(1)
+}
+app.use(cors({ origin: corsOrigin ?? '*' }))
 app.use(express.json({ limit: '2mb' }))
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
