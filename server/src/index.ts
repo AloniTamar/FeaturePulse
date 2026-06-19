@@ -1,6 +1,8 @@
 // server/src/index.ts
 import express from 'express'
 import cors from 'cors'
+import pinoHttp from 'pino-http'
+import { logger } from './lib/logger'
 import { eventsRouter } from './routes/events'
 import { featuresRouter } from './routes/features'
 import { dashboardRouter } from './routes/dashboard'
@@ -20,6 +22,10 @@ if (!corsOrigin && process.env.NODE_ENV === 'production') {
 }
 app.use(cors({ origin: corsOrigin ?? '*' }))
 app.use(express.json({ limit: '2mb' }))
+
+if (process.env.NODE_ENV !== 'test') {
+  app.use(pinoHttp({ logger }))
+}
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
