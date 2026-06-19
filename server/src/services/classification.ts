@@ -1,4 +1,3 @@
-// server/src/services/classification.ts
 import { prisma } from '../db/client'
 
 export type FeatureState = 'THRIVING' | 'DECLINING' | 'DORMANT' | 'DEAD'
@@ -8,33 +7,25 @@ export interface WeeklyRate {
   rate: number
 }
 
-/** Pure function — testable without database */
 export function determineState(
   currentRate: number,
   weeklyRates: WeeklyRate[],
   daysSinceLastInteraction: number | null,
   thresholds: { deadDays: number; dormantWeeks: number } = { deadDays: 30, dormantWeeks: 2 }
 ): FeatureState {
-  // DEAD: zero interactions for deadDays+ consecutive days
   if (daysSinceLastInteraction !== null && daysSinceLastInteraction >= thresholds.deadDays) return 'DEAD'
-
-  // DORMANT: rate < 1% sustained across last dormantWeeks weekly buckets
   if (
     weeklyRates.length >= thresholds.dormantWeeks &&
     weeklyRates.slice(-thresholds.dormantWeeks).every(w => w.rate < 0.01)
   ) return 'DORMANT'
-
-  // DECLINING: rate dropped >20% week-over-week
   if (weeklyRates.length >= 2) {
     const prev = weeklyRates[weeklyRates.length - 2].rate
     const curr = weeklyRates[weeklyRates.length - 1].rate
     if (prev > 0 && (prev - curr) / prev > 0.2) return 'DECLINING'
   }
-
   return 'THRIVING'
 }
 
-/** Pure function — testable without database */
 export function calculateDecayRate(weeklyRates: number[]): number {
   if (weeklyRates.length < 2) return 0
   const prev = weeklyRates[weeklyRates.length - 2]
@@ -43,59 +34,61 @@ export function calculateDecayRate(weeklyRates: number[]): number {
   return (prev - curr) / prev
 }
 
-/** Classifies all non-ignored features for an app and persists state transitions */
+// Exported so aggregation.ts can call it; reads WeeklyAggregate instead of DailyAggregate
 export async function classifyAllFeatures(appId: string): Promise<void> {
   const app = await prisma.app.findUnique({ where: { id: appId } })
   const thresholds = {
     deadDays:     app?.deadThresholdDays    ?? 30,
     dormantWeeks: Math.ceil((app?.dormantThresholdDays ?? 14) / 7),
   }
-
-  const features = await prisma.feature.findMany({ where: { appId, isIgnored: false } })
-
-  for (const feature of features) {
-    const newState = await classifyFeature(feature.id, thresholds)
-    if (newState !== feature.state) {
-      await prisma.feature.update({ where: { id: feature.id }, data: { state: newState } })
-      await prisma.stateTransition.create({
-        data: {
-          featureId: feature.id,
-          oldState:  feature.state,
-          newState,
-          reason: `Automated classification on ${new Date().toISOString().slice(0, 10)}`,
-        },
-      })
-    }
-  }
-}
-
-/** Database-bound — reads aggregate days dynamically based on dormantWeeks and classifies one feature */
-export async function classifyFeature(
-  featureId: string,
-  thresholds: { deadDays: number; dormantWeeks: number } = { deadDays: 30, dormantWeeks: 2 }
-): Promise<FeatureState> {
   const bucketCount = Math.max(2, thresholds.dormantWeeks)
 
-  const agg = await prisma.dailyAggregate.findMany({
-    where: { featureId },
-    orderBy: { date: 'desc' },
-    take: bucketCount * 7,
+  // Query 1: all non-ignored features
+  const features = await prisma.feature.findMany({ where: { appId, isIgnored: false } })
+  if (features.length === 0) return
+
+  // Query 2: all weekly rates for those features (last N weeks)
+  const cutoff = new Date()
+  cutoff.setUTCDate(cutoff.getUTCDate() - bucketCount * 7)
+  const weeklyRows = await prisma.weeklyAggregate.findMany({
+    where: { featureId: { in: features.map(f => f.id) }, weekStart: { gte: cutoff } },
+    orderBy: { weekStart: 'asc' },
   })
 
-  if (agg.length === 0) return 'THRIVING'
+  // Group weekly rows by featureId in memory
+  const weeklyByFeature = new Map<string, WeeklyRate[]>()
+  for (const row of weeklyRows) {
+    const list = weeklyByFeature.get(row.featureId) ?? []
+    list.push({ week: list.length + 1, rate: row.avgInteractionRate })
+    weeklyByFeature.set(row.featureId, list)
+  }
 
-  const feature = await prisma.feature.findUnique({ where: { id: featureId } })
-  const daysSince = feature?.lastInteraction
-    ? Math.floor((Date.now() - feature.lastInteraction.getTime()) / 86_400_000)
-    : null
+  // Classify in memory — no DB calls
+  const stateChanges: { featureId: string; oldState: string; newState: string }[] = []
+  for (const feature of features) {
+    const rates = weeklyByFeature.get(feature.id) ?? []
+    const daysSince = feature.lastInteraction
+      ? Math.floor((Date.now() - feature.lastInteraction.getTime()) / 86_400_000)
+      : null
+    const currentRate = rates.length > 0 ? rates[rates.length - 1].rate : 0
+    const newState = determineState(currentRate, rates, daysSince, thresholds)
+    if (newState !== feature.state) {
+      stateChanges.push({ featureId: feature.id, oldState: feature.state, newState })
+    }
+  }
 
-  // agg is DESC order (most recent first); reverse to get oldest-first for bucketing
-  const ascending = [...agg].reverse()
-  const weeklyRates: WeeklyRate[] = Array.from({ length: bucketCount }, (_, w) => {
-    const slice = ascending.slice(w * 7, (w + 1) * 7)
-    if (slice.length === 0) return null
-    return { week: w + 1, rate: slice.reduce((s, r) => s + r.interactionRate, 0) / slice.length }
-  }).filter((w): w is WeeklyRate => w !== null)
+  if (stateChanges.length === 0) return
 
-  return determineState(agg[0]?.interactionRate ?? 0, weeklyRates, daysSince, thresholds)
+  // Query 3: one transaction for all updates
+  const today = new Date().toISOString().slice(0, 10)
+  await prisma.$transaction([
+    ...stateChanges.map(({ featureId, newState }) =>
+      prisma.feature.update({ where: { id: featureId }, data: { state: newState } })
+    ),
+    ...stateChanges.map(({ featureId, oldState, newState }) =>
+      prisma.stateTransition.create({
+        data: { featureId, oldState, newState, reason: `Automated classification on ${today}` },
+      })
+    ),
+  ])
 }
