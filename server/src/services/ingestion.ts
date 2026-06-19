@@ -81,3 +81,28 @@ export async function upsertFeature(
     create: { id: featureId, appId, elementType, resourceName, screenName, hierarchyPath, state: 'THRIVING' },
   })
 }
+
+export interface FeatureInput {
+  featureId: string
+  elementType: string
+  resourceName: string | null
+  screenName: string
+  hierarchyPath: string | null
+}
+
+export async function upsertFeatures(appId: string, features: FeatureInput[]): Promise<{ registered: number }> {
+  const unique = [...new Map(features.map(f => [f.featureId, f])).values()]
+  const result = await prisma.feature.createMany({
+    data: unique.map(f => ({
+      id: f.featureId,
+      appId,
+      elementType: f.elementType,
+      resourceName: f.resourceName,
+      screenName: f.screenName,
+      hierarchyPath: f.hierarchyPath,
+      state: 'THRIVING',
+    })),
+    skipDuplicates: true,
+  })
+  return { registered: result.count }
+}

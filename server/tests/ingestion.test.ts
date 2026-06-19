@@ -1,5 +1,5 @@
 // server/tests/ingestion.test.ts
-import { ingestBatch, BatchPayload } from '../src/services/ingestion'
+import { ingestBatch, upsertFeatures, BatchPayload } from '../src/services/ingestion'
 import { prisma } from '../src/db/client'
 
 beforeEach(async () => {
@@ -62,6 +62,18 @@ test('rejects event with invalid eventType', async () => {
   }
   const result = await ingestBatch(app.id, payload)
   expect(result.rejected).toBe(1)
+})
+
+test('upsertFeatures registers multiple features and deduplicates', async () => {
+  const app = await createTestApp()
+  const result = await upsertFeatures(app.id, [
+    { featureId: 'batch_f1', elementType: 'Button', resourceName: 'btn_ok', screenName: 'Main', hierarchyPath: null },
+    { featureId: 'batch_f2', elementType: 'TextView', resourceName: null, screenName: 'Main', hierarchyPath: '/root/text' },
+    { featureId: 'batch_f1', elementType: 'Button', resourceName: 'btn_ok', screenName: 'Main', hierarchyPath: null },
+  ])
+  expect(result.registered).toBe(2)
+  const count = await prisma.feature.count({ where: { appId: app.id } })
+  expect(count).toBe(2)
 })
 
 test('rejects event with timestamp older than 7 days', async () => {
