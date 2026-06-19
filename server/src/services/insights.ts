@@ -49,7 +49,9 @@ Use specific feature names from the data. No markdown, no extra text.`,
   const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}') as { summary?: string; bullets?: string[] }
 
   const summary = json.summary ?? 'Unable to generate summary.'
-  const bullets = Array.isArray(json.bullets) ? json.bullets : []
+  const bullets = Array.isArray(json.bullets)
+    ? (json.bullets as unknown[]).filter((b): b is string => typeof b === 'string')
+    : []
 
   await prisma.appInsight.upsert({
     where: { appId },

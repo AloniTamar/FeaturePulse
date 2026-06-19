@@ -33,6 +33,7 @@ function clamp(v: number, min: number, max: number) {
 
 type AggRow = {
   featureId: string
+  appId: string
   date: Date
   impressions: number
   interactions: number
@@ -40,13 +41,14 @@ type AggRow = {
   interactionRate: number
 }
 
-function thrivingAggregates(featureId: string, days = 60): AggRow[] {
+function thrivingAggregates(featureId: string, appId: string, days = 60): AggRow[] {
   return Array.from({ length: days }, (_, i) => {
     const impressions = rand(600, 2200)
     const rate = (rand(80, 150) / 1000)   // 8–15%
     const interactions = Math.round(impressions * rate)
     return {
       featureId,
+      appId,
       date: daysAgo(days - i),
       impressions,
       interactions,
@@ -56,7 +58,7 @@ function thrivingAggregates(featureId: string, days = 60): AggRow[] {
   })
 }
 
-function decliningAggregates(featureId: string, days = 60): AggRow[] {
+function decliningAggregates(featureId: string, appId: string, days = 60): AggRow[] {
   return Array.from({ length: days }, (_, i) => {
     const progress = i / days                          // 0 → 1 over time
     const impressions = rand(300, 1400)
@@ -64,6 +66,7 @@ function decliningAggregates(featureId: string, days = 60): AggRow[] {
     const interactions = Math.round(impressions * rate)
     return {
       featureId,
+      appId,
       date: daysAgo(days - i),
       impressions,
       interactions,
@@ -73,13 +76,14 @@ function decliningAggregates(featureId: string, days = 60): AggRow[] {
   })
 }
 
-function dormantAggregates(featureId: string, days = 60): AggRow[] {
+function dormantAggregates(featureId: string, appId: string, days = 60): AggRow[] {
   return Array.from({ length: days }, (_, i) => {
     const impressions = rand(150, 700)
     const rate = clamp(0.008 - (i / days) * 0.006, 0.001, 0.008) // slow taper, always <1%
     const interactions = i < 30 ? rand(0, 4) : rand(0, 2)
     return {
       featureId,
+      appId,
       date: daysAgo(days - i),
       impressions,
       interactions,
@@ -89,12 +93,13 @@ function dormantAggregates(featureId: string, days = 60): AggRow[] {
   })
 }
 
-function deadAggregates(featureId: string, days = 60): AggRow[] {
+function deadAggregates(featureId: string, appId: string, days = 60): AggRow[] {
   return Array.from({ length: days }, (_, i) => {
     const daysFromNow = days - i
     const impressions = daysFromNow > 35 ? rand(80, 400) : rand(20, 100)
     return {
       featureId,
+      appId,
       date: daysAgo(days - i),
       impressions,
       interactions: 0,
@@ -102,6 +107,75 @@ function deadAggregates(featureId: string, days = 60): AggRow[] {
       interactionRate: 0,
     }
   })
+}
+
+// ---------- derived-aggregate helpers ----------
+
+/** Returns the Monday of the ISO week containing `date`, at midnight UTC. */
+function isoWeekStart(date: Date): Date {
+  const d = new Date(date)
+  d.setUTCHours(0, 0, 0, 0)
+  const day = d.getUTCDay() // 0=Sun … 6=Sat
+  const diff = day === 0 ? -6 : 1 - day
+  d.setUTCDate(d.getUTCDate() + diff)
+  return d
+}
+
+/** Inserts AppDailyStats rows derived from an array of DailyAggregate rows for one app. */
+async function seedAppDailyStats(appId: string, rows: AggRow[]) {
+  // Group by date string
+  const byDate = new Map<string, AggRow[]>()
+  for (const r of rows) {
+    const key = r.date.toISOString().slice(0, 10)
+    if (!byDate.has(key)) byDate.set(key, [])
+    byDate.get(key)!.push(r)
+  }
+
+  const stats = Array.from(byDate.entries()).map(([, dayRows]) => {
+    const totalImpressions  = dayRows.reduce((s, r) => s + r.impressions,  0)
+    const totalInteractions = dayRows.reduce((s, r) => s + r.interactions, 0)
+    // derive DAU from the sum of uniqueUsers, capped at a realistic range
+    const derivedDAU = Math.max(50, Math.min(200, dayRows.reduce((s, r) => s + r.uniqueUsers, 0)))
+    return {
+      appId,
+      date:              dayRows[0].date,
+      dailyActiveUsers:  derivedDAU,
+      totalImpressions,
+      totalInteractions,
+    }
+  })
+
+  await prisma.appDailyStats.createMany({ data: stats })
+}
+
+/** Inserts WeeklyAggregate rows derived from an array of DailyAggregate rows for one feature. */
+async function seedWeeklyAggregates(featureId: string, rows: AggRow[]) {
+  // Group by ISO week start (as ISO string key)
+  const byWeek = new Map<string, AggRow[]>()
+  for (const r of rows) {
+    const ws = isoWeekStart(r.date)
+    const key = ws.toISOString()
+    if (!byWeek.has(key)) byWeek.set(key, [])
+    byWeek.get(key)!.push(r)
+  }
+
+  const weeks = Array.from(byWeek.entries()).map(([weekKey, weekRows]) => {
+    const totalImpressions  = weekRows.reduce((s, r) => s + r.impressions,  0)
+    const totalInteractions = weekRows.reduce((s, r) => s + r.interactions, 0)
+    const avgInteractionRate =
+      weekRows.reduce((s, r) => s + r.interactionRate, 0) / weekRows.length
+    const uniqueUsers = Math.max(...weekRows.map(r => r.uniqueUsers))
+    return {
+      featureId,
+      weekStart:          new Date(weekKey),
+      avgInteractionRate,
+      totalInteractions,
+      totalImpressions,
+      uniqueUsers,
+    }
+  })
+
+  await prisma.weeklyAggregate.createMany({ data: weeks })
 }
 
 // ---------- main ----------
@@ -157,6 +231,8 @@ async function main() {
     { screen: 'SearchScreen',   resource: 'btn_voice_search',   state: 'DORMANT',   lastInteraction: daysAgo(22), firstSeen: daysAgo(48) },
   ]
 
+  const shopAllRows: AggRow[] = []
+
   for (const f of shopFeatures) {
     const id = fid(f.screen, f.resource)
     await prisma.feature.create({
@@ -177,7 +253,10 @@ async function main() {
       : f.state === 'DORMANT'   ? dormantAggregates
       : deadAggregates
 
-    await prisma.dailyAggregate.createMany({ data: aggFn(id) })
+    const rows = aggFn(id, shop.id)
+    await prisma.dailyAggregate.createMany({ data: rows })
+    shopAllRows.push(...rows)
+    await seedWeeklyAggregates(id, rows)
 
     // State transitions
     if (f.state === 'THRIVING') {
@@ -203,6 +282,7 @@ async function main() {
     }
   }
 
+  await seedAppDailyStats(shop.id, shopAllRows)
   console.log(`✓ ShopMate Pro — ${shopFeatures.length} features`)
 
   // ─── App 2: FitTrack ──────────────────────────────────────────────────────
@@ -234,6 +314,8 @@ async function main() {
     { screen: 'SettingsScreen',  resource: 'widget_customizer',  state: 'DEAD',      lastInteraction: null,        firstSeen: daysAgo(40) },
   ]
 
+  const fitAllRows: AggRow[] = []
+
   for (const f of fitFeatures) {
     const id = fid(f.screen, f.resource)
     await prisma.feature.create({
@@ -254,7 +336,10 @@ async function main() {
       : f.state === 'DORMANT'   ? dormantAggregates
       : deadAggregates
 
-    await prisma.dailyAggregate.createMany({ data: aggFn(id) })
+    const rows = aggFn(id, fit.id)
+    await prisma.dailyAggregate.createMany({ data: rows })
+    fitAllRows.push(...rows)
+    await seedWeeklyAggregates(id, rows)
 
     if (f.state === 'THRIVING') {
       await prisma.stateTransition.create({ data: { featureId: id, oldState: null, newState: 'THRIVING', changedAt: daysAgo(48), reason: 'Feature first seen' } })
@@ -279,6 +364,7 @@ async function main() {
     }
   }
 
+  await seedAppDailyStats(fit.id, fitAllRows)
   console.log(`✓ FitTrack — ${fitFeatures.length} features`)
   console.log('Seed complete.')
 }
