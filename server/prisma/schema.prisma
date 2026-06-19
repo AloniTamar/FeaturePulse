@@ -28,8 +28,13 @@ model App {
   deadThresholdDays     Int @default(30)
   dormantThresholdDays  Int @default(14)
   eventRetentionDays    Int @default(7)
+  aiInsightsEnabled    Boolean  @default(false)
+  aiInsightsMode       String   @default("nightly")
   features    Feature[]
   rawEvents   RawEvent[]
+  dailyAggregates      DailyAggregate[]
+  appDailyStats        AppDailyStats[]
+  appInsight           AppInsight?
 }
 
 model Feature {
@@ -46,6 +51,7 @@ model Feature {
   isIgnored        Boolean   @default(false)
   metadata         Json      @default("{}")
   dailyAggregates  DailyAggregate[]
+  weeklyAggregates WeeklyAggregate[]
   stateTransitions StateTransition[]
 
   @@index([appId, state])
@@ -68,15 +74,18 @@ model RawEvent {
 
 model DailyAggregate {
   featureId       String
+  appId           String
   date            DateTime @db.Date
   impressions     Int      @default(0)
   interactions    Int      @default(0)
   uniqueUsers     Int      @default(0)
   interactionRate Float    @default(0.0)
   feature         Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  app             App      @relation(fields: [appId], references: [id], onDelete: Cascade)
 
   @@id([featureId, date])
   @@index([date])
+  @@index([appId, date])
 }
 
 model StateTransition {
@@ -89,4 +98,37 @@ model StateTransition {
   reason    String?
 
   @@index([featureId, changedAt])
+}
+
+model AppDailyStats {
+  appId             String
+  date              DateTime @db.Date
+  dailyActiveUsers  Int      @default(0)
+  totalImpressions  Int      @default(0)
+  totalInteractions Int      @default(0)
+  app               App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@id([appId, date])
+  @@index([appId, date])
+}
+
+model WeeklyAggregate {
+  featureId          String
+  weekStart          DateTime
+  avgInteractionRate Float    @default(0.0)
+  totalInteractions  Int      @default(0)
+  totalImpressions   Int      @default(0)
+  uniqueUsers        Int      @default(0)
+  feature            Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([featureId, weekStart])
+  @@index([featureId, weekStart])
+}
+
+model AppInsight {
+  appId       String   @id
+  summary     String
+  bullets     Json
+  generatedAt DateTime @default(now())
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
 }
