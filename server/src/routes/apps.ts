@@ -52,6 +52,8 @@ appsRouter.get('/', jwtAuth, async (req: AuthRequest, res) => {
       deadThresholdDays:    a.deadThresholdDays,
       dormantThresholdDays: a.dormantThresholdDays,
       eventRetentionDays:   a.eventRetentionDays,
+      aiInsightsEnabled:    a.aiInsightsEnabled,
+      aiInsightsMode:       a.aiInsightsMode,
     })))
   } catch {
     res.status(500).json({ error: 'Internal server error' })
