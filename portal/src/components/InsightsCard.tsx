@@ -30,18 +30,21 @@ export default function InsightsCard({ appId, enabled, mode }: InsightsCardProps
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-slate-900 font-bold" style={{ fontSize: 13.5 }}>AI Insights</p>
-          <p className="text-slate-400 mt-0.5" style={{ fontSize: 11.5 }}>Powered by Claude</p>
+          <p className="text-slate-400 mt-0.5" style={{ fontSize: 11.5 }}>Powered by Gemma</p>
         </div>
         {mode === 'on_demand' && (
-          <button onClick={load} disabled={loading}
-            className="border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-semibold rounded-lg transition-colors disabled:opacity-50"
-            style={{ padding: '5px 12px', fontSize: 12 }}>
-            {loading ? 'Generating…' : '↺ Refresh'}
-          </button>
+          <div className="flex items-center gap-3">
+            {error && <p className="text-red-400" style={{ fontSize: 11.5 }}>{error}</p>}
+            <button onClick={load} disabled={loading}
+              className="border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-semibold rounded-lg transition-colors disabled:opacity-50"
+              style={{ padding: '5px 12px', fontSize: 12 }}>
+              {loading ? 'Generating…' : '↺ Refresh'}
+            </button>
+          </div>
         )}
       </div>
       {loading && !data && <p className="text-slate-400" style={{ fontSize: 13 }}>Generating insights…</p>}
-      {error   && <p className="text-red-500"   style={{ fontSize: 13 }}>{error}</p>}
+      {error && !data && <p className="text-red-500" style={{ fontSize: 13 }}>{error}</p>}
       {data && (
         <>
           <p className="text-slate-700 mb-3" style={{ fontSize: 13, lineHeight: 1.65 }}>{data.summary}</p>
