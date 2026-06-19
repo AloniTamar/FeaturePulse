@@ -43,6 +43,32 @@ export function calculateDecayRate(weeklyRates: number[]): number {
   return (prev - curr) / prev
 }
 
+/** Classifies all non-ignored features for an app and persists state transitions */
+export async function classifyAllFeatures(appId: string): Promise<void> {
+  const app = await prisma.app.findUnique({ where: { id: appId } })
+  const thresholds = {
+    deadDays:     app?.deadThresholdDays    ?? 30,
+    dormantWeeks: Math.ceil((app?.dormantThresholdDays ?? 14) / 7),
+  }
+
+  const features = await prisma.feature.findMany({ where: { appId, isIgnored: false } })
+
+  for (const feature of features) {
+    const newState = await classifyFeature(feature.id, thresholds)
+    if (newState !== feature.state) {
+      await prisma.feature.update({ where: { id: feature.id }, data: { state: newState } })
+      await prisma.stateTransition.create({
+        data: {
+          featureId: feature.id,
+          oldState:  feature.state,
+          newState,
+          reason: `Automated classification on ${new Date().toISOString().slice(0, 10)}`,
+        },
+      })
+    }
+  }
+}
+
 /** Database-bound — reads aggregate days dynamically based on dormantWeeks and classifies one feature */
 export async function classifyFeature(
   featureId: string,

@@ -1,6 +1,14 @@
-// server/src/services/aggregation.ts
 import { prisma } from '../db/client'
-import { classifyFeature } from './classification'
+import { classifyAllFeatures } from './classification'
+
+export function getISOWeekStart(date: Date): Date {
+  const d = new Date(date)
+  d.setUTCHours(0, 0, 0, 0)
+  const day = d.getUTCDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setUTCDate(d.getUTCDate() + diff)
+  return d
+}
 
 export async function aggregateDay(appId: string, date: Date): Promise<void> {
   const startOfDay = new Date(date)
@@ -8,27 +16,122 @@ export async function aggregateDay(appId: string, date: Date): Promise<void> {
   const endOfDay = new Date(startOfDay)
   endOfDay.setUTCDate(endOfDay.getUTCDate() + 1)
 
-  const featureGroups = await prisma.rawEvent.groupBy({
-    by: ['featureId'],
-    where: { appId, timestamp: { gte: startOfDay, lt: endOfDay } },
+  // Single query replaces the old N+1 loop
+  const featureStats = await prisma.$queryRaw<{
+    featureId: string
+    impressions: bigint
+    interactions: bigint
+    uniqueUsers: bigint
+  }[]>`
+    SELECT
+      "featureId",
+      COUNT(*) FILTER (WHERE "eventType" = 'IMPRESSION')  AS impressions,
+      COUNT(*) FILTER (WHERE "eventType" != 'IMPRESSION') AS interactions,
+      COUNT(DISTINCT "deviceId")                           AS "uniqueUsers"
+    FROM "RawEvent"
+    WHERE "appId" = ${appId}
+      AND "timestamp" >= ${startOfDay}
+      AND "timestamp" < ${endOfDay}
+    GROUP BY "featureId"
+  `
+
+  if (featureStats.length > 0) {
+    await Promise.all(
+      featureStats.map(row => {
+        const impressions     = Number(row.impressions)
+        const interactions    = Number(row.interactions)
+        const uniqueUsers     = Number(row.uniqueUsers)
+        const interactionRate = impressions > 0 ? interactions / impressions : 0
+        return prisma.dailyAggregate.upsert({
+          where: { featureId_date: { featureId: row.featureId, date: startOfDay } },
+          update: { impressions, interactions, uniqueUsers, interactionRate, appId },
+          create: { featureId: row.featureId, appId, date: startOfDay, impressions, interactions, uniqueUsers, interactionRate },
+        })
+      })
+    )
+  }
+
+  // App-level DAU — one query, not a sum of per-feature uniqueUsers (avoids double-counting)
+  const [appStats] = await prisma.$queryRaw<{
+    uniqueUsers: bigint
+    totalImpressions: bigint
+    totalInteractions: bigint
+  }[]>`
+    SELECT
+      COUNT(DISTINCT "deviceId")                           AS "uniqueUsers",
+      COUNT(*) FILTER (WHERE "eventType" = 'IMPRESSION')  AS "totalImpressions",
+      COUNT(*) FILTER (WHERE "eventType" != 'IMPRESSION') AS "totalInteractions"
+    FROM "RawEvent"
+    WHERE "appId" = ${appId}
+      AND "timestamp" >= ${startOfDay}
+      AND "timestamp" < ${endOfDay}
+  `
+
+  await prisma.appDailyStats.upsert({
+    where: { appId_date: { appId, date: startOfDay } },
+    update: {
+      dailyActiveUsers:  Number(appStats?.uniqueUsers ?? 0),
+      totalImpressions:  Number(appStats?.totalImpressions ?? 0),
+      totalInteractions: Number(appStats?.totalInteractions ?? 0),
+    },
+    create: {
+      appId, date: startOfDay,
+      dailyActiveUsers:  Number(appStats?.uniqueUsers ?? 0),
+      totalImpressions:  Number(appStats?.totalImpressions ?? 0),
+      totalInteractions: Number(appStats?.totalInteractions ?? 0),
+    },
   })
 
-  for (const { featureId } of featureGroups) {
-    const events = await prisma.rawEvent.findMany({
-      where: { featureId, appId, timestamp: { gte: startOfDay, lt: endOfDay } },
-    })
+  await updateWeeklyAggregates(appId, date)
+}
 
-    const interactions = events.filter(e => e.eventType !== 'IMPRESSION').length
-    const impressions  = events.filter(e => e.eventType === 'IMPRESSION').length
-    const uniqueUsers  = new Set(events.map(e => e.deviceId).filter(Boolean)).size
-    const interactionRate = impressions > 0 ? interactions / impressions : 0
+async function updateWeeklyAggregates(appId: string, date: Date): Promise<void> {
+  const weekStart = getISOWeekStart(date)
+  const weekEnd   = new Date(weekStart)
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7)
 
-    await prisma.dailyAggregate.upsert({
-      where: { featureId_date: { featureId, date: startOfDay } },
-      update: { interactions, impressions, uniqueUsers, interactionRate },
-      create: { featureId, date: startOfDay, interactions, impressions, uniqueUsers, interactionRate },
-    })
-  }
+  // Recompute week totals from DailyAggregate (uses the new appId index — no join needed)
+  const rows = await prisma.$queryRaw<{
+    featureId: string
+    avgRate: number
+    totalInteractions: bigint
+    totalImpressions: bigint
+    maxUniqueUsers: bigint
+  }[]>`
+    SELECT
+      "featureId",
+      AVG("interactionRate")::float AS "avgRate",
+      SUM("interactions")           AS "totalInteractions",
+      SUM("impressions")            AS "totalImpressions",
+      MAX("uniqueUsers")            AS "maxUniqueUsers"
+    FROM "DailyAggregate"
+    WHERE "appId" = ${appId}
+      AND "date" >= ${weekStart}
+      AND "date" < ${weekEnd}
+    GROUP BY "featureId"
+  `
+
+  await Promise.all(
+    rows.map(row =>
+      prisma.weeklyAggregate.upsert({
+        where: { featureId_weekStart: { featureId: row.featureId, weekStart } },
+        update: {
+          avgInteractionRate: row.avgRate,
+          totalInteractions:  Number(row.totalInteractions),
+          totalImpressions:   Number(row.totalImpressions),
+          uniqueUsers:        Number(row.maxUniqueUsers),
+        },
+        create: {
+          featureId: row.featureId,
+          weekStart,
+          avgInteractionRate: row.avgRate,
+          totalInteractions:  Number(row.totalInteractions),
+          totalImpressions:   Number(row.totalImpressions),
+          uniqueUsers:        Number(row.maxUniqueUsers),
+        },
+      })
+    )
+  )
 }
 
 export async function runNightlyAggregation(): Promise<void> {
@@ -44,35 +147,9 @@ export async function runNightlyAggregation(): Promise<void> {
     await aggregateDay(app.id, yesterday)
     await classifyAllFeatures(app.id)
 
-    const retentionDays = app.eventRetentionDays ?? 7
-    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
+    const cutoff = new Date(Date.now() - (app.eventRetentionDays ?? 7) * 86_400_000)
     await prisma.rawEvent.deleteMany({ where: { appId: app.id, timestamp: { lt: cutoff } } })
   }
 
   console.log('[Cron] Done.')
-}
-
-async function classifyAllFeatures(appId: string): Promise<void> {
-  const app = await prisma.app.findUnique({ where: { id: appId } })
-  const thresholds = {
-    deadDays:    app?.deadThresholdDays    ?? 30,
-    dormantWeeks: Math.ceil((app?.dormantThresholdDays ?? 14) / 7),
-  }
-
-  const features = await prisma.feature.findMany({ where: { appId, isIgnored: false } })
-
-  for (const feature of features) {
-    const newState = await classifyFeature(feature.id, thresholds)
-    if (newState !== feature.state) {
-      await prisma.feature.update({ where: { id: feature.id }, data: { state: newState } })
-      await prisma.stateTransition.create({
-        data: {
-          featureId: feature.id,
-          oldState:  feature.state,
-          newState,
-          reason: `Automated classification on ${new Date().toISOString().slice(0, 10)}`,
-        },
-      })
-    }
-  }
 }
