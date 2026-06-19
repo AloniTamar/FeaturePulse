@@ -215,3 +215,46 @@ describe('GET /apps/:appId/transitions', () => {
     expect(res.status).toBe(403)
   })
 })
+
+describe('POST /apps/:appId/rotate-key', () => {
+  async function setupUserAndApp(email: string) {
+    await request(app).post('/api/v1/auth/register').send({ email, password: 'Password1!' })
+    const loginRes = await request(app).post('/api/v1/auth/login').send({ email, password: 'Password1!' })
+    const token = loginRes.body.token
+    const createRes = await request(app)
+      .post('/api/v1/apps')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'TestApp', packageName: `com.${email.split('@')[0]}.test` })
+    return { token, appId: createRes.body.id, originalKey: createRes.body.apiKey }
+  }
+
+  test('returns a new fp_-prefixed API key different from the original', async () => {
+    const { token, appId, originalKey } = await setupUserAndApp('rotate1@test.com')
+    const res = await request(app)
+      .post(`/api/v1/apps/${appId}/rotate-key`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(res.status).toBe(200)
+    expect(res.body.apiKey).toMatch(/^fp_/)
+    expect(res.body.apiKey).not.toBe(originalKey)
+  })
+
+  test('old key returns 401 after rotation', async () => {
+    const { token, appId, originalKey } = await setupUserAndApp('rotate2@test.com')
+    await request(app).post(`/api/v1/apps/${appId}/rotate-key`).set('Authorization', `Bearer ${token}`)
+    const res = await request(app)
+      .post('/api/v1/events/batch')
+      .set('X-API-Key', originalKey)
+      .send({ appId, events: [] })
+    expect(res.status).toBe(401)
+  })
+
+  test('non-owner gets 403', async () => {
+    const { appId } = await setupUserAndApp('rotate3@test.com')
+    await request(app).post('/api/v1/auth/register').send({ email: 'attacker@test.com', password: 'Password1!' })
+    const attackerLogin = await request(app).post('/api/v1/auth/login').send({ email: 'attacker@test.com', password: 'Password1!' })
+    const res = await request(app)
+      .post(`/api/v1/apps/${appId}/rotate-key`)
+      .set('Authorization', `Bearer ${attackerLogin.body.token}`)
+    expect(res.status).toBe(403)
+  })
+})

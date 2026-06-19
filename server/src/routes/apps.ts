@@ -135,6 +135,22 @@ appsRouter.delete('/:appId', jwtAuth, async (req: AuthRequest, res) => {
   }
 })
 
+// POST /api/v1/apps/:appId/rotate-key — invalidate current API key and issue a new one
+appsRouter.post('/:appId/rotate-key', jwtAuth, async (req: AuthRequest, res) => {
+  try {
+    const owned = await requireOwnership(req, res, req.params.appId)
+    if (!owned) return
+    const newKey = 'fp_' + crypto.randomBytes(24).toString('hex')
+    const updated = await prisma.app.update({
+      where: { id: req.params.appId },
+      data: { apiKey: newKey, apiKeyHash: newKey },
+    })
+    res.json({ apiKey: updated.apiKey })
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // PUT /api/v1/apps/:appId/config — SDK remote config update
 appsRouter.put('/:appId/config', jwtAuth, async (req: AuthRequest, res) => {
   try {
