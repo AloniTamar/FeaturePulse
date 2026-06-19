@@ -61,9 +61,9 @@ One account can own multiple apps. App context lives in the URL (`/apps/:appId/.
 
 ### Apps
 
-- `GET /apps` — list authenticated user's apps
+- `GET /apps` — list authenticated user's apps (includes `aiInsightsEnabled`, `aiInsightsMode`)
 - `POST /apps` — create app (returns `apiKey` starting with `fp_`)
-- `PATCH /apps/:appId` — rename
+- `PATCH /apps/:appId` — update name, thresholds, retention, or AI insights settings
 - `DELETE /apps/:appId` — delete (cascades features, events, aggregates)
 - All `:appId` routes enforce ownership (403 if not owner)
 
@@ -78,6 +78,7 @@ One account can own multiple apps. App context lives in the URL (`/apps/:appId/.
 /apps/:appId/features
 /apps/:appId/features/:id
 /apps/:appId/alerts
+/apps/:appId/analytics
 /apps/:appId/settings
 ```
 
@@ -91,7 +92,9 @@ One account can own multiple apps. App context lives in the URL (`/apps/:appId/.
 
 **Batching:** Events buffered in circular buffer (max 500), flushed every 30 min via WorkManager. Persisted to SharedPreferences on `onTrimMemory()`.
 
-**Data efficiency:** Raw events have 7-day TTL. Portal reads only `daily_aggregates`. Dead feature list target: < 5ms via `(appId, state)` index.
+**Data efficiency:** Raw events have 7-day TTL. Nightly cron aggregates into `DailyAggregate` (per-feature), `AppDailyStats` (per-app DAU), and `WeeklyAggregate` (per-feature weekly rates). Classification reads from `WeeklyAggregate` — 3 DB calls for the entire app. Dead feature list target: < 5ms via `(appId, state)` index.
+
+**AI Insights:** Optional per-app feature. When enabled, calls OpenRouter (`google/gemma-4-31b-it:free`) to generate a health summary and action bullets. Two modes: `nightly` (pre-computed by cron, instant load) or `on_demand` (fresh on each Analytics page visit). `OPENROUTER_API_KEY` is required in `server/.env` — never exposed to the portal. Stored in `AppInsight` table.
 
 ## Presentation
 

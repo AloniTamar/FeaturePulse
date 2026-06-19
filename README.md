@@ -22,9 +22,9 @@ FeaturePulse is an Android SDK that intercepts touch events at the window level,
 1. **SDK** wraps `Window.Callback` using the Proxy pattern — no code changes needed in the host app
 2. Every touch is fingerprinted: `SHA256(screenName + resourceName)`
 3. Events are buffered locally (circular buffer, max 500) and flushed every 30 min via WorkManager
-4. The **backend** aggregates raw events into daily stats and runs a nightly classification job at 02:00 UTC
+4. The **backend** aggregates raw events into daily stats (`DailyAggregate`, `AppDailyStats`, `WeeklyAggregate`) and runs a nightly classification job at 02:00 UTC
 5. Classification state machine: `THRIVING → DECLINING → DORMANT → DEAD`
-6. The **portal** shows per-app dashboards, feature lists, trend charts, and state transition history
+6. The **portal** shows per-app dashboards, feature lists, trend charts, state transition history, and an **Analytics** page with screen health, DAU trends, feature reach, and AI-generated insights
 
 ---
 
@@ -37,6 +37,7 @@ FeaturePulse is an Android SDK that intercepts touch events at the window level,
 ```bash
 cd server
 cp .env.example .env   # fill in DATABASE_URL, JWT_SECRET, PORT, CORS_ORIGIN
+                       # optionally add OPENROUTER_API_KEY for AI Insights
 npx prisma migrate deploy
 npm run dev             # runs on :3000
 ```
@@ -109,6 +110,8 @@ GET    /api/v1/apps/:appId/features/:id
 GET    /api/v1/apps/:appId/transitions
 GET    /api/v1/apps/:appId/export?format=csv|json
 GET    /api/v1/apps/:appId/dead
+GET    /api/v1/apps/:appId/analytics
+GET    /api/v1/apps/:appId/insights
 
 POST   /api/v1/events          (SDK endpoint)
 POST   /api/v1/cron            (trigger classification manually)
