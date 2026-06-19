@@ -1,6 +1,7 @@
 // server/src/routes/events.ts
 import { Router } from 'express'
 import { apiKeyAuth, AuthRequest } from '../middleware/auth'
+import { apiKeyRateLimit } from '../middleware/rateLimit'
 import { ingestBatch, upsertFeature, BatchPayloadSchema } from '../services/ingestion'
 import { z } from 'zod'
 
@@ -16,7 +17,7 @@ const DiscoverSchema = z.object({
   })),
 })
 
-eventsRouter.post('/batch', apiKeyAuth, async (req: AuthRequest, res) => {
+eventsRouter.post('/batch', apiKeyRateLimit, apiKeyAuth, async (req: AuthRequest, res) => {
   const result = BatchPayloadSchema.safeParse(req.body)
   if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
@@ -28,7 +29,7 @@ eventsRouter.post('/batch', apiKeyAuth, async (req: AuthRequest, res) => {
   }
 })
 
-eventsRouter.post('/discover', apiKeyAuth, async (req: AuthRequest, res) => {
+eventsRouter.post('/discover', apiKeyRateLimit, apiKeyAuth, async (req: AuthRequest, res) => {
   const result = DiscoverSchema.safeParse(req.body)
   if (!result.success) return res.status(400).json({ error: result.error.flatten() })
 
