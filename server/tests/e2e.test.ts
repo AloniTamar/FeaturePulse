@@ -92,6 +92,7 @@ describe('FeaturePulse full flow', () => {
     await prisma.dailyAggregate.create({
       data: {
         featureId: 'fp_feat_b_dead',
+        appId,
         date: thirtyTwoDaysAgo,
         impressions: 5,
         interactions: 0,
