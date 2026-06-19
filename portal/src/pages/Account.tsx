@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api, clearToken } from '../api/client'
 
 function FinalDeleteModal({ onConfirm, onCancel, loading }: {
@@ -37,7 +36,6 @@ function FinalDeleteModal({ onConfirm, onCancel, loading }: {
 }
 
 export default function Account() {
-  const nav    = useNavigate()
   const email  = localStorage.getItem('fp_email') ?? ''
 
   const [currentPw,  setCurrentPw]  = useState('')

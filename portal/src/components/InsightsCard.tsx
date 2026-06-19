@@ -46,7 +46,7 @@ export default function InsightsCard({ appId, enabled, mode }: InsightsCardProps
         <>
           <p className="text-slate-700 mb-3" style={{ fontSize: 13, lineHeight: 1.65 }}>{data.summary}</p>
           <ul className="flex flex-col gap-1.5">
-            {data.bullets.map((b, i) => (
+            {data.bullets.map((b: string, i: number) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-indigo-500 flex-shrink-0" style={{ fontSize: 13 }}>•</span>
                 <span className="text-slate-600" style={{ fontSize: 13 }}>{b}</span>

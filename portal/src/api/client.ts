@@ -91,6 +91,12 @@ export const api = {
 
   exportFeatures: (appId: string, format: 'json' | 'csv') =>
     `${BASE}/api/v1/apps/${appId}/export?format=${format}`,
+
+  getAnalytics: (appId: string) =>
+    request<AnalyticsData>(`/apps/${appId}/analytics`),
+
+  getInsights: (appId: string) =>
+    request<AppInsight>(`/apps/${appId}/insights`),
 }
 
 export interface AppSummary {
@@ -103,6 +109,8 @@ export interface AppSummary {
   deadThresholdDays: number
   dormantThresholdDays: number
   eventRetentionDays: number
+  aiInsightsEnabled: boolean
+  aiInsightsMode: string
 }
 
 export interface Feature {
@@ -133,4 +141,23 @@ export interface AppSettings {
   deadThresholdDays: number
   dormantThresholdDays: number
   eventRetentionDays: number
+}
+
+export interface AnalyticsScreenRow {
+  screenName: string; total: number; thriving: number
+  declining: number; dormant: number; dead: number; healthPct: number
+}
+export interface AnalyticsDecliningRow {
+  id: string; resourceName: string | null; screenName: string
+  state: string; wowChangePct: number; lastInteraction: string | null
+}
+export interface AnalyticsData {
+  screenBreakdown: AnalyticsScreenRow[]
+  topDeclining:    AnalyticsDecliningRow[]
+  dauTrend:        { date: string; dailyActiveUsers: number }[]
+  rateHistogram:   { bucket: string; count: number }[]
+  featureReach:    { featureId: string; resourceName: string | null; screenName: string; reachPct: number }[]
+}
+export interface AppInsight {
+  summary: string; bullets: string[]; generatedAt: string
 }

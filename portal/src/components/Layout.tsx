@@ -20,10 +20,11 @@ const GridIcon: FC<{ className?: string }> = ({ className }) => (
     <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" />
   </svg>
 )
-const BellIcon: FC<{ className?: string }> = ({ className }) => (
+const ChartIcon: FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M7.5 1.5A5 5 0 0 1 12.5 6.5c0 3-1.2 4.5-2.2 5.5h-5.6C3.7 11 2.5 9.5 2.5 6.5a5 5 0 0 1 5-5z" />
-    <path d="M5.5 12v.5a2 2 0 0 0 4 0V12" strokeLinecap="round" />
+    <rect x="1" y="8" width="3" height="6" rx="0.5" />
+    <rect x="6" y="5" width="3" height="9" rx="0.5" />
+    <rect x="11" y="2" width="3" height="12" rx="0.5" />
   </svg>
 )
 const CogIcon: FC<{ className?: string }> = ({ className }) => (
@@ -74,6 +75,7 @@ const PAGE_LABELS: Record<string, string> = {
   'dashboard': 'Dashboard',
   'features':  'Features',
   'transitions': 'Transitions',
+  'analytics': 'Analytics',
   'settings':  'Settings',
 }
 
@@ -220,7 +222,7 @@ function Topbar({ lastSynced }: { lastSynced: Date | null }) {
   const lastSegment = segments[segments.length - 1]
   const pageLabel = PAGE_LABELS[location.pathname] ?? PAGE_LABELS[lastSegment] ?? 'Detail'
 
-  const ANALYTICS_PAGES = new Set(['dashboard', 'features', 'transitions'])
+  const ANALYTICS_PAGES = new Set(['dashboard', 'features', 'transitions', 'analytics'])
   const showSynced = lastSynced && segments.length === 3 && ANALYTICS_PAGES.has(segments[2])
 
   // suppress unused warning — appId drives activeApp via AppContext
@@ -288,6 +290,7 @@ function Sidebar({ deadCount }: { deadCount: number }) {
         <NavItem to={hasApp ? `/apps/${effectiveAppId}/dashboard` : '#'} label="Dashboard" Icon={HomeIcon} disabled={!hasApp} />
         <NavItem to={hasApp ? `/apps/${effectiveAppId}/features` : '#'}  label="Features"  Icon={GridIcon}  badgeCount={hasApp ? deadCount : 0} badgeColor="red" disabled={!hasApp} />
         <NavItem to={hasApp ? `/apps/${effectiveAppId}/transitions` : '#'} label="Transitions" Icon={ClockIcon} disabled={!hasApp} />
+        <NavItem to={hasApp ? `/apps/${effectiveAppId}/analytics` : '#'} label="Analytics" Icon={ChartIcon} disabled={!hasApp} />
 
         <div className="my-1" style={{ height: 1, background: '#F1F5F9', margin: '4px 0' }} />
 

@@ -10,6 +10,7 @@ import Settings from './pages/Settings'
 import Account from './pages/Account'
 import Apps from './pages/Apps'
 import Docs from './pages/Docs'
+import Analytics from './pages/Analytics'
 
 function AuthLayout() {
   return isLoggedIn() ? <Layout /> : <Navigate to="/login" replace />
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="features"               element={<Features />} />
             <Route path="features/:featureId"    element={<FeatureDetail />} />
             <Route path="transitions"            element={<Transitions />} />
+            <Route path="analytics"              element={<Analytics />} />
             <Route path="settings"               element={<Settings />} />
           </Route>
         </Route>

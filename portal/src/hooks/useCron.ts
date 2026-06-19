@@ -4,7 +4,7 @@ const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export type CronState = 'idle' | 'loading' | 'ok' | 'error'
 
-export function useCron(appId: string) {
+export function useCron(_appId: string) {
   const [cronState, setCronState] = useState<CronState>('idle')
   const mountedRef = useRef(true)
 
