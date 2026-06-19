@@ -10,7 +10,6 @@ import { appsRouter } from './routes/apps'
 import { authRouter } from './routes/auth'
 import { startCronJobs } from './cron/nightly'
 import { runNightlyAggregation } from './services/aggregation'
-import { jwtAuth } from './middleware/auth'
 
 const app = express()
 
@@ -24,11 +23,15 @@ app.use(express.json({ limit: '2mb' }))
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
-app.post('/api/v1/cron', jwtAuth, async (_req, res) => {
+app.post('/api/v1/cron/nightly', async (req, res) => {
+  const secret = process.env.CRON_SECRET
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
   try {
     await runNightlyAggregation()
     res.json({ ok: true, message: 'Aggregation complete' })
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Cron job failed' })
   }
 })
