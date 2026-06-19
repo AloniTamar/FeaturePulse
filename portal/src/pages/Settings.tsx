@@ -153,6 +153,13 @@ export default function Settings() {
   const [retentionSaved,   setRetentionSaved]   = useState(false)
   const [retentionSaving,  setRetentionSaving]  = useState(false)
 
+  const [aiEnabled,   setAiEnabled]   = useState(activeApp?.aiInsightsEnabled ?? false)
+  const [aiMode,      setAiMode]      = useState<'nightly' | 'on_demand'>(
+    (activeApp?.aiInsightsMode ?? 'nightly') as 'nightly' | 'on_demand'
+  )
+  const [aiSaved,     setAiSaved]     = useState(false)
+  const [aiSaving,    setAiSaving]    = useState(false)
+
   if (!activeApp) return <p className="text-slate-400 p-8">Loading…</p>
 
   async function saveThresholds() {
@@ -175,6 +182,17 @@ export default function Settings() {
       setTimeout(() => setRetentionSaved(false), 2000)
     } catch {}
     finally { setRetentionSaving(false) }
+  }
+
+  async function saveAiSettings() {
+    setAiSaving(true)
+    try {
+      await api.updateAppSettings(activeApp!.id, { aiInsightsEnabled: aiEnabled, aiInsightsMode: aiMode })
+      await reloadApps()
+      setAiSaved(true)
+      setTimeout(() => setAiSaved(false), 2000)
+    } catch {}
+    finally { setAiSaving(false) }
   }
 
   return (
@@ -245,6 +263,56 @@ export default function Settings() {
             {retentionSaving ? 'Saving…' : 'Save'}
           </button>
           {retentionSaved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
+        </div>
+      </div>
+
+      {/* AI Insights */}
+      <div className="bg-white rounded-card border border-slate-200 p-6 mb-5">
+        <h2 className="text-slate-900 font-bold mb-1" style={{ fontSize: 14 }}>AI Insights</h2>
+        <p className="text-slate-400 mb-5" style={{ fontSize: 12 }}>
+          When enabled, Claude analyses your app's feature data and generates a health summary with actionable recommendations.
+        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-slate-800 font-semibold" style={{ fontSize: 13 }}>Enable AI Insights</p>
+          <button
+            onClick={() => setAiEnabled(e => !e)}
+            className={`relative inline-flex items-center rounded-full transition-colors flex-shrink-0 ${
+              aiEnabled ? 'bg-indigo-600' : 'bg-slate-200'
+            }`}
+            style={{ width: 40, height: 22 }}
+          >
+            <span
+              className="inline-block bg-white rounded-full shadow transition-transform"
+              style={{ width: 16, height: 16, margin: 3, transform: aiEnabled ? 'translateX(18px)' : 'translateX(0)' }}
+            />
+          </button>
+        </div>
+        {aiEnabled && (
+          <div className="flex flex-col gap-2 mb-4 pl-1">
+            <p className="text-slate-600 font-semibold mb-1" style={{ fontSize: 12.5 }}>Generate insights:</p>
+            {(['nightly', 'on_demand'] as const).map(m => (
+              <label key={m} className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="radio" name="aiMode" value={m} checked={aiMode === m}
+                  onChange={() => setAiMode(m)}
+                  className="accent-indigo-600"
+                />
+                <span className="text-slate-700" style={{ fontSize: 13 }}>
+                  {m === 'nightly' ? 'Nightly — pre-computed by cron, instant load' : 'On-demand — fresh each time you open Analytics'}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={saveAiSettings} disabled={aiSaving}
+            className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
+            style={{ padding: '8px 18px', fontSize: 13 }}
+          >
+            {aiSaving ? 'Saving…' : 'Save'}
+          </button>
+          {aiSaved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
         </div>
       </div>
 
