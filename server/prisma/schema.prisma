@@ -31,6 +31,9 @@ model App {
   aiInsightsEnabled    Boolean  @default(false)
   aiInsightsMode       String   @default("nightly")
   openRouterApiKey     String?
+  monthlyEventQuota   Int    @default(0)
+  currentMonthEvents  Int    @default(0)
+  quotaResetMonth     String @default("")
   features    Feature[]
   rawEvents   RawEvent[]
   dailyAggregates      DailyAggregate[]
