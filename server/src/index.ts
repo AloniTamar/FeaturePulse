@@ -47,7 +47,8 @@ app.post('/api/v1/cron/nightly', async (req, res) => {
   try {
     await runNightlyAggregation()
     res.json({ ok: true, message: 'Aggregation complete' })
-  } catch {
+  } catch (err) {
+    logger.error({ err }, 'Nightly aggregation failed')
     res.status(500).json({ error: 'Cron job failed' })
   }
 })

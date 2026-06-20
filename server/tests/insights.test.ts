@@ -1,6 +1,11 @@
 import { generateAndSaveInsights } from '../src/services/insights'
 import { prisma } from '../src/db/client'
 
+// The second test makes a real HTTPS call to openrouter.ai with an invalid key
+// and waits for a 401 response. CI environments that throttle external connections
+// can exceed Jest's default 5 s timeout, so we bump it to 15 s for the whole file.
+jest.setTimeout(15000)
+
 beforeEach(async () => {
   await prisma.appInsight.deleteMany()
   await prisma.appDailyStats.deleteMany()
