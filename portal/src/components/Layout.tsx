@@ -328,6 +328,9 @@ function Sidebar({ deadCount }: { deadCount: number }) {
             Log out
           </button>
         </div>
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <a href="/privacy" className="text-xs text-gray-500 hover:underline">Privacy Policy</a>
+        </div>
       </div>
     </aside>
   )

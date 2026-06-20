@@ -11,6 +11,7 @@ import Account from './pages/Account'
 import Apps from './pages/Apps'
 import Docs from './pages/Docs'
 import Analytics from './pages/Analytics'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 function AuthLayout() {
   return isLoggedIn() ? <Layout /> : <Navigate to="/login" replace />
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/apps" element={<Apps />} />
           <Route path="/account" element={<Account />} />
           <Route path="/docs" element={<Docs />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           {/* App-level routes — appId in URL */}
           <Route path="/apps/:appId">
             <Route path="dashboard"              element={<Dashboard />} />
