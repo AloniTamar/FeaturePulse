@@ -112,6 +112,8 @@ export interface AppSummary {
   aiInsightsEnabled: boolean
   aiInsightsMode: string
   hasCustomApiKey: boolean
+  monthlyEventQuota: number
+  currentMonthEvents: number
 }
 
 export interface Feature {

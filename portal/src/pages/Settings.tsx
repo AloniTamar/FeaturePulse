@@ -380,6 +380,27 @@ export default function Settings() {
         )}
       </div>
 
+      {/* Monthly Event Usage */}
+      {activeApp.monthlyEventQuota > 0 && (
+        <div className="bg-white rounded-card border border-slate-200 p-6 mb-5">
+          <h2 className="text-slate-900 font-bold mb-1" style={{ fontSize: 14 }}>Monthly Event Usage</h2>
+          <div className="mt-2 w-full bg-gray-200 rounded-full" style={{ height: 8 }}>
+            <div
+              className={`rounded-full transition-all ${
+                activeApp.currentMonthEvents / activeApp.monthlyEventQuota > 0.9 ? 'bg-red-500' : 'bg-indigo-500'
+              }`}
+              style={{
+                height: 8,
+                width: `${Math.min(100, (activeApp.currentMonthEvents / activeApp.monthlyEventQuota) * 100)}%`
+              }}
+            />
+          </div>
+          <p className="mt-1 text-slate-500" style={{ fontSize: 12 }}>
+            {activeApp.currentMonthEvents.toLocaleString()} / {activeApp.monthlyEventQuota.toLocaleString()} events this month
+          </p>
+        </div>
+      )}
+
       {/* Danger Zone */}
       <RenameDeleteCard
         app={activeApp}
