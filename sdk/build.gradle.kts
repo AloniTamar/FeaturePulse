@@ -3,6 +3,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     `maven-publish`
+    id("signing")
 }
 
 android {
@@ -44,26 +45,60 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                from(components["release"])
-                groupId    = "com.github.featurepulse"
-                artifactId = "sdk"
-                version    = "1.0.0"
-                pom {
-                    name.set("FeaturePulse SDK")
-                    description.set("Android SDK for automatic dead feature detection")
-                    url.set("https://github.com/featurepulse/featurepulse")
-                    licenses {
-                        license {
-                            name.set("MIT License")
-                            url.set("https://opensource.org/licenses/MIT")
-                        }
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "io.github.TamarAloni"
+            artifactId = "featurepulse-sdk"
+            version = "1.0.0"
+
+            afterEvaluate { from(components["release"]) }
+
+            pom {
+                name.set("FeaturePulse SDK")
+                description.set("Android SDK for automatically detecting unused UI elements")
+                url.set("https://github.com/TamarAloni/FeaturePulse")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
                     }
+                }
+                developers {
+                    developer {
+                        id.set("TamarAloni")
+                        name.set("Tamar Aloni")
+                        email.set("tamaraloni11@gmail.com")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/TamarAloni/FeaturePulse.git")
+                    developerConnection.set("scm:git:ssh://github.com/TamarAloni/FeaturePulse.git")
+                    url.set("https://github.com/TamarAloni/FeaturePulse")
                 }
             }
         }
     }
+    repositories {
+        maven {
+            name = "OSSRH"
+            url = uri(
+                if (version.toString().endsWith("SNAPSHOT"))
+                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                else
+                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            )
+            credentials {
+                username = System.getenv("OSSRH_USERNAME")
+                password = System.getenv("OSSRH_PASSWORD")
+            }
+        }
+    }
+}
+
+signing {
+    val signingKey = System.getenv("GPG_PRIVATE_KEY")
+    val signingPassword = System.getenv("GPG_PASSPHRASE")
+    if (signingKey != null) useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(publishing.publications["release"])
 }
