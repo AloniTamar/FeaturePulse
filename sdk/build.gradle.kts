@@ -3,7 +3,6 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     `maven-publish`
-    id("signing")
 }
 
 android {
@@ -48,7 +47,7 @@ dependencies {
 publishing {
     publications {
         create<MavenPublication>("release") {
-            groupId = "io.github.TamarAloni"
+            groupId = "com.github.TamarAloni"
             artifactId = "featurepulse-sdk"
             version = "1.0.0"
 
@@ -79,26 +78,4 @@ publishing {
             }
         }
     }
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = uri(
-                if (version.toString().endsWith("SNAPSHOT"))
-                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                else
-                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            )
-            credentials {
-                username = System.getenv("OSSRH_USERNAME")
-                password = System.getenv("OSSRH_PASSWORD")
-            }
-        }
-    }
-}
-
-signing {
-    val signingKey = System.getenv("GPG_PRIVATE_KEY")
-    val signingPassword = System.getenv("GPG_PASSPHRASE")
-    if (signingKey != null) useInMemoryPgpKeys(signingKey, signingPassword)
-    sign(publishing.publications["release"])
 }
