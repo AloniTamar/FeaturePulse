@@ -54,6 +54,7 @@ appsRouter.get('/', jwtAuth, async (req: AuthRequest, res) => {
       eventRetentionDays:   a.eventRetentionDays,
       aiInsightsEnabled:    a.aiInsightsEnabled,
       aiInsightsMode:       a.aiInsightsMode,
+      hasCustomApiKey:      a.openRouterApiKey !== null,
     })))
   } catch {
     res.status(500).json({ error: 'Internal server error' })
@@ -94,6 +95,7 @@ const UpdateAppSchema = z.object({
   eventRetentionDays:   z.number().int().min(1).max(365).optional(),
   aiInsightsEnabled:    z.boolean().optional(),
   aiInsightsMode:       z.enum(['nightly', 'on_demand']).optional(),
+  openRouterApiKey:     z.string().nullable().optional(),
 })
 
 appsRouter.patch('/:appId', jwtAuth, async (req: AuthRequest, res) => {

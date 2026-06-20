@@ -45,7 +45,13 @@ export default function InsightsCard({ appId, enabled, mode }: InsightsCardProps
       </div>
       {loading && !data && <p className="text-slate-400" style={{ fontSize: 13 }}>Generating insights…</p>}
       {error && !data && <p className="text-red-500" style={{ fontSize: 13 }}>{error}</p>}
-      {data && (
+      {data?.unavailable ? (
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <p className="text-yellow-800 font-semibold" style={{ fontSize: 13 }}>AI Insights Unavailable</p>
+          <p className="text-yellow-700 mt-1" style={{ fontSize: 13 }}>{data.reason}</p>
+          <p className="text-yellow-600 mt-1" style={{ fontSize: 11.5 }}>Raw analytics data above is unaffected.</p>
+        </div>
+      ) : data ? (
         <>
           <p className="text-slate-700 mb-3" style={{ fontSize: 13, lineHeight: 1.65 }}>{data.summary}</p>
           <ul className="flex flex-col gap-1.5">
@@ -62,7 +68,7 @@ export default function InsightsCard({ appId, enabled, mode }: InsightsCardProps
             </p>
           )}
         </>
-      )}
+      ) : null}
     </div>
   )
 }

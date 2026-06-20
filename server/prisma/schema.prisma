@@ -30,6 +30,7 @@ model App {
   eventRetentionDays    Int @default(7)
   aiInsightsEnabled    Boolean  @default(false)
   aiInsightsMode       String   @default("nightly")
+  openRouterApiKey     String?
   features    Feature[]
   rawEvents   RawEvent[]
   dailyAggregates      DailyAggregate[]

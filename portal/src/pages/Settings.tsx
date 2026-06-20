@@ -159,6 +159,9 @@ export default function Settings() {
   )
   const [aiSaved,     setAiSaved]     = useState(false)
   const [aiSaving,    setAiSaving]    = useState(false)
+  const [customApiKey, setCustomApiKey] = useState('')
+  const [apiKeySaved,  setApiKeySaved]  = useState(false)
+  const [apiKeySaving, setApiKeySaving] = useState(false)
 
   if (!activeApp) return <p className="text-slate-400 p-8">Loading…</p>
 
@@ -193,6 +196,29 @@ export default function Settings() {
       setTimeout(() => setAiSaved(false), 2000)
     } catch {}
     finally { setAiSaving(false) }
+  }
+
+  async function saveApiKey() {
+    setApiKeySaving(true)
+    try {
+      await api.updateAppSettings(activeApp!.id, { openRouterApiKey: customApiKey || null })
+      await reloadApps()
+      setCustomApiKey('')
+      setApiKeySaved(true)
+      setTimeout(() => setApiKeySaved(false), 2000)
+    } catch {}
+    finally { setApiKeySaving(false) }
+  }
+
+  async function clearApiKey() {
+    setApiKeySaving(true)
+    try {
+      await api.updateAppSettings(activeApp!.id, { openRouterApiKey: null })
+      await reloadApps()
+      setApiKeySaved(true)
+      setTimeout(() => setApiKeySaved(false), 2000)
+    } catch {}
+    finally { setApiKeySaving(false) }
   }
 
   return (
@@ -304,7 +330,7 @@ export default function Settings() {
             ))}
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-5">
           <button
             onClick={saveAiSettings} disabled={aiSaving}
             className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
@@ -314,6 +340,44 @@ export default function Settings() {
           </button>
           {aiSaved && <span className="text-green-600 font-medium" style={{ fontSize: 13 }}>✓ Saved</span>}
         </div>
+        {aiEnabled && (
+          <div className="border-t border-slate-100 pt-5">
+            <p className="text-slate-800 font-semibold mb-0.5" style={{ fontSize: 13 }}>
+              OpenRouter API Key
+              <span className="ml-1 text-slate-400 font-normal" style={{ fontSize: 12 }}>(optional — improves AI insights quality)</span>
+            </p>
+            <p className="text-slate-400 mb-3" style={{ fontSize: 12 }}>
+              Get a free key at openrouter.ai. Using your own key enables premium models.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                placeholder={activeApp.hasCustomApiKey ? '••••••••••••••••' : 'sk-or-... (uses shared free tier if empty)'}
+                value={customApiKey}
+                onChange={e => setCustomApiKey(e.target.value)}
+                className="flex-1 border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors"
+                style={{ padding: '8px 12px', fontSize: 13 }}
+              />
+              <button
+                onClick={saveApiKey} disabled={apiKeySaving || !customApiKey}
+                className="bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                style={{ padding: '8px 14px', fontSize: 13 }}
+              >
+                {apiKeySaving ? 'Saving…' : 'Save Key'}
+              </button>
+              {activeApp.hasCustomApiKey && (
+                <button
+                  onClick={clearApiKey} disabled={apiKeySaving}
+                  className="border border-red-200 text-red-500 font-semibold rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                  style={{ padding: '8px 14px', fontSize: 13 }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {apiKeySaved && <p className="text-green-600 font-medium mt-2" style={{ fontSize: 13 }}>✓ Saved</p>}
+          </div>
+        )}
       </div>
 
       {/* Danger Zone */}

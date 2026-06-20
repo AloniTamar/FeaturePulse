@@ -15,19 +15,23 @@ insightsRouter.get('/apps/:appId/insights', jwtAuth, async (req: AuthRequest, re
 
     if (app.aiInsightsMode === 'on_demand') {
       const result = await generateAndSaveInsights(appId)
+      if (!result) {
+        return res.json({ unavailable: true, reason: 'AI model temporarily unreachable. Please try again later.' })
+      }
       return res.json(result)
     }
 
-    // nightly: return stored insight
+    // nightly mode: return stored insight
     const stored = await prisma.appInsight.findUnique({ where: { appId } })
-    if (!stored) return res.status(404).json({ error: 'No insights yet — run cron first' })
+    if (!stored) {
+      return res.json({ unavailable: true, reason: 'No insights generated yet — check back after 02:00 UTC.' })
+    }
     res.json({
       summary: stored.summary,
       bullets: stored.bullets as string[],
       generatedAt: stored.generatedAt.toISOString(),
     })
   } catch (e) {
-    console.error(e)
     res.status(503).json({ error: 'Service unavailable' })
   }
 })

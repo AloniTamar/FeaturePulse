@@ -111,6 +111,7 @@ export interface AppSummary {
   eventRetentionDays: number
   aiInsightsEnabled: boolean
   aiInsightsMode: string
+  hasCustomApiKey: boolean
 }
 
 export interface Feature {
@@ -141,6 +142,9 @@ export interface AppSettings {
   deadThresholdDays: number
   dormantThresholdDays: number
   eventRetentionDays: number
+  aiInsightsEnabled?: boolean
+  aiInsightsMode?: 'nightly' | 'on_demand'
+  openRouterApiKey?: string | null
 }
 
 export interface AnalyticsScreenRow {
@@ -158,6 +162,6 @@ export interface AnalyticsData {
   rateHistogram:   { bucket: string; count: number }[]
   featureReach:    { featureId: string; resourceName: string | null; screenName: string; reachPct: number }[]
 }
-export interface AppInsight {
-  summary: string; bullets: string[]; generatedAt: string
-}
+export type AppInsight =
+  | { unavailable: true; reason: string }
+  | { unavailable?: false; summary: string; bullets: string[]; generatedAt: string }
