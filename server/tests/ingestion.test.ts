@@ -86,3 +86,42 @@ test('rejects event with timestamp older than 7 days', async () => {
   const result = await ingestBatch(app.id, payload)
   expect(result.rejected).toBe(1)
 })
+
+test('rejects all events when monthly quota is already at limit', async () => {
+  const user = await prisma.user.create({ data: { email: 'quota1@test.com', passwordHash: 'x' } })
+  const limitedApp = await prisma.app.create({
+    data: {
+      name: 'LimitedApp', packageName: 'com.limited', apiKey: 'fp_limited_key',
+      apiKeyHash: 'fp_limited_key', userId: user.id,
+      monthlyEventQuota: 5,
+      currentMonthEvents: 5,
+      quotaResetMonth: new Date().toISOString().slice(0, 7),
+    },
+  })
+  const result = await ingestBatch(limitedApp.id, validPayload(limitedApp.id))
+  expect(result.accepted).toBe(0)
+  expect(result.quotaExceeded).toBe(true)
+})
+
+test('resets counter and accepts events when quotaResetMonth is an old month', async () => {
+  const user = await prisma.user.create({ data: { email: 'quota2@test.com', passwordHash: 'x' } })
+  const oldMonthApp = await prisma.app.create({
+    data: {
+      name: 'OldMonthApp', packageName: 'com.oldmonth', apiKey: 'fp_oldmonth_key',
+      apiKeyHash: 'fp_oldmonth_key', userId: user.id,
+      monthlyEventQuota: 5,
+      currentMonthEvents: 5,
+      quotaResetMonth: '2020-01',
+    },
+  })
+  const result = await ingestBatch(oldMonthApp.id, validPayload(oldMonthApp.id))
+  expect(result.accepted).toBe(2)
+  expect(result.quotaExceeded).toBe(false)
+})
+
+test('unlimited quota (0) always accepts events', async () => {
+  const app = await createTestApp()
+  const result = await ingestBatch(app.id, validPayload(app.id))
+  expect(result.quotaExceeded).toBe(false)
+  expect(result.accepted).toBe(2)
+})

@@ -24,9 +24,30 @@ export interface IngestResult {
   accepted: number
   rejected: number
   errors: string[]
+  quotaExceeded: boolean
 }
 
 export async function ingestBatch(appId: string, payload: BatchPayload): Promise<IngestResult> {
+  const currentMonth = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+
+  const appRecord = await prisma.app.findUnique({
+    where: { id: appId },
+    select: { monthlyEventQuota: true, currentMonthEvents: true, quotaResetMonth: true },
+  })
+  if (!appRecord) {
+    return { accepted: 0, rejected: payload.events.length, errors: ['App not found'], quotaExceeded: false }
+  }
+
+  let currentCount = appRecord.currentMonthEvents
+  if (appRecord.quotaResetMonth !== currentMonth) {
+    await prisma.app.update({ where: { id: appId }, data: { currentMonthEvents: 0, quotaResetMonth: currentMonth } })
+    currentCount = 0
+  }
+
+  if (appRecord.monthlyEventQuota > 0 && currentCount >= appRecord.monthlyEventQuota) {
+    return { accepted: 0, rejected: payload.events.length, errors: ['Monthly event quota exceeded'], quotaExceeded: true }
+  }
+
   const errors: string[] = []
   let accepted = 0
 
@@ -64,7 +85,10 @@ export async function ingestBatch(appId: string, payload: BatchPayload): Promise
     }
   }
 
-  return { accepted, rejected: errors.length, errors }
+  if (accepted > 0) {
+    await prisma.app.update({ where: { id: appId }, data: { currentMonthEvents: { increment: accepted } } })
+  }
+  return { accepted, rejected: errors.length, errors, quotaExceeded: false }
 }
 
 export async function upsertFeature(
