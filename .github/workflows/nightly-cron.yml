@@ -1,0 +1,21 @@
+name: Nightly Cron
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 02:00 UTC every night
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+
+jobs:
+  run-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger nightly aggregation
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST https://featurepulse-production-d81d.up.railway.app/api/v1/cron/nightly \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "Response code: $response"
+          if [ "$response" != "200" ]; then
+            echo "Cron job failed with HTTP $response"
+            exit 1
+          fi
