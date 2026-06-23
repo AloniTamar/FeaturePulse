@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm ci --include=dev"]
 
 [phases.build]
-cmds = ["npm run build", "npx prisma generate", "npm prune --omit=dev"]
+cmds = ["npx prisma generate", "npm run build", "npm prune --omit=dev"]
 
 [start]
 cmd = "npx prisma migrate deploy && npm start"
