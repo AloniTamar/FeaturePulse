@@ -31,6 +31,7 @@ authRouter.post('/register', async (req, res) => {
     if (err instanceof Object && 'code' in err && (err as { code: string }).code === 'P2002') {
       return res.status(409).json({ error: 'Email already registered' })
     }
+    console.error('[register] error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
