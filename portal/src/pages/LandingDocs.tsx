@@ -447,7 +447,7 @@ export default function LandingDocs() {
                 The Analytics page aggregates all collected data into actionable metrics. Available via <code className="bg-slate-100 px-1 rounded font-mono text-xs">GET /apps/:appId/analytics</code>.
               </p>
               <div className="flex flex-col gap-2">
-                {ANALYTICS_METRICS.map(({ name, badge, desc, detail }) => {
+                {ANALYTICS_METRICS.map(({ name, badge, detail }) => {
                   const open = expandedMetric === name
                   return (
                     <div
