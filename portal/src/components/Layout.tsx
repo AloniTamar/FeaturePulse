@@ -69,9 +69,9 @@ const ClockIcon: FC<{ className?: string }> = ({ className }) => (
 )
 
 const PAGE_LABELS: Record<string, string> = {
+  '/': 'SDK Docs',
   '/apps': 'Apps',
   '/account': 'Account',
-  '/docs': 'Docs',
   'dashboard': 'Dashboard',
   'features':  'Features',
   'transitions': 'Transitions',
@@ -306,7 +306,7 @@ function Sidebar({ deadCount }: { deadCount: number }) {
         </p>
         <NavItem to="/apps"    label="Apps"    Icon={AppsIcon} end />
         <NavItem to="/account" label="Account" Icon={PersonIcon} />
-        <NavItem to="/docs"    label="Docs"    Icon={DocIcon} />
+        <NavItem to="/"        label="SDK Docs" Icon={DocIcon} end />
       </nav>
 
       {/* Footer — App Switcher + user info */}

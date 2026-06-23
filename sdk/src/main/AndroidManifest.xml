@@ -5,14 +5,13 @@
 
     <application>
         <!--
-            ContentProvider that auto-initializes FeaturePulse before Application.onCreate().
+            ContentProvider that auto-initializes FeaturePulse via App Startup.
             ${applicationId} is replaced with the consuming app's package name by manifest merger.
-            initOrder=100 ensures FeaturePulse starts before other ContentProviders.
+            No initOrder set — default ordering ensures WorkManager initializes first.
         -->
         <provider
             android:name="com.featurepulse.internal.FeaturePulseInitProvider"
             android:authorities="${applicationId}.featurepulse_init_provider"
-            android:exported="false"
-            android:initOrder="100" />
+            android:exported="false" />
     </application>
 </manifest>
