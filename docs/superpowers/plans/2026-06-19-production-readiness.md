@@ -4,6 +4,27 @@
 
 **Goal:** Harden the FeaturePulse backend, infrastructure, and SDK for real-traffic production deployment beyond the university course.
 
+---
+
+## Live Deployment Status (as of 2026-06-20)
+
+| Component | URL | Status |
+|-----------|-----|--------|
+| Server (Railway) | https://featurepulse-production-d81d.up.railway.app | ✅ Active |
+| Portal (Vercel) | https://feature-pulse-theta.vercel.app | ✅ Live |
+| Nightly Cron | GitHub Actions `.github/workflows/nightly-cron.yml` | ✅ Scheduled 02:00 UTC |
+
+**Smoke-tested flows:** register, login, create app (API key visible), dashboard, features, analytics, settings, account delete/login.
+
+**Infrastructure notes:**
+- `server/railway.json` uses `startCommand: "node dist/index.js"` — migrations are **not** run automatically on deploy. Future schema changes must be applied manually via Railway shell: `npx prisma migrate deploy`.
+- Nightly cron fires via GitHub Actions (`schedule: cron: '0 2 * * *'`) and POSTs `Authorization: Bearer ${{ secrets.CRON_SECRET }}` to `/api/v1/cron/nightly`. Add `CRON_SECRET` as a GitHub Actions secret to enable it.
+- `SENTRY_DSN` is optional — Sentry init is guarded so the server starts cleanly without it.
+
+**Pending items (non-blocking):**
+- "Run Cron Now" portal button currently fails — needs a JWT-protected `/api/v1/cron/trigger` endpoint the portal calls with the user's JWT (instead of `CRON_SECRET`).
+- Add `CRON_SECRET` as a GitHub Actions repo secret to activate the nightly schedule.
+
 **Architecture:** Six independent tracks (A–F) ordered by priority. Each track is independently deployable — start with Track A before going live with real traffic. Tracks B, C, D, E, F can be executed in parallel by different engineers once Track A is done.
 
 **Tech Stack:** Node.js 20 / Express / TypeScript / Prisma / PostgreSQL (server), React 18 / Vite / Tailwind (portal), Kotlin / Android (SDK), Railway (hosting), Vercel (portal hosting), GitHub Actions (CI), pino (structured logging), Sentry (error tracking), express-rate-limit (rate limiting)
@@ -218,9 +239,9 @@ git commit -m "fix(security): fail fast if CORS_ORIGIN is unset in production"
 
 ---
 
-### Task A3: Replace In-Process Cron with External Trigger
+### Task A3: Replace In-Process Cron with External Trigger ✅ DONE
 
-`node-cron` runs inside the Express process. With 2+ instances, nightly aggregation double-runs. This removes node-cron and switches the trigger to an authenticated HTTP endpoint callable by Railway's cron service or GitHub Actions.
+`node-cron` removed. `/api/v1/cron/nightly` is live, secured by `CRON_SECRET`. GitHub Actions workflow fires it at 02:00 UTC. See [Live Deployment Status](#live-deployment-status-as-of-2026-06-20) above.
 
 **Files:**
 - Modify: `server/src/cron/nightly.ts`
@@ -231,7 +252,7 @@ git commit -m "fix(security): fail fast if CORS_ORIGIN is unset in production"
 **Interfaces:**
 - Produces: `POST /api/v1/cron/nightly` secured by `Authorization: Bearer <CRON_SECRET>`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `server/tests/cron.test.ts`:
 
@@ -267,7 +288,7 @@ test('POST /api/v1/cron/nightly accepts correct CRON_SECRET', async () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 cd server && npx jest --forceExit --runInBand tests/cron.test.ts
@@ -275,7 +296,7 @@ cd server && npx jest --forceExit --runInBand tests/cron.test.ts
 
 Expected: FAIL — the existing `/api/v1/cron` endpoint uses JWT auth, not CRON_SECRET, and is at the wrong path.
 
-- [ ] **Step 3: Remove node-cron from nightly.ts**
+- [x] **Step 3: Remove node-cron from nightly.ts**
 
 Replace the entire content of `server/src/cron/nightly.ts` with:
 
@@ -287,7 +308,7 @@ export function startCronJobs(): void {
 }
 ```
 
-- [ ] **Step 4: Update the cron route in index.ts**
+- [x] **Step 4: Update the cron route in index.ts**
 
 In `server/src/index.ts`, replace:
 ```typescript
@@ -316,42 +337,19 @@ app.post('/api/v1/cron/nightly', async (req, res) => {
 })
 ```
 
-- [ ] **Step 5: Uninstall node-cron**
+- [x] **Step 5: Uninstall node-cron**
 
 ```bash
 cd server && npm uninstall node-cron
 ```
 
-- [ ] **Step 6: Update .env.example**
+- [x] **Step 6: Update .env.example**
 
-Add to `server/.env.example`:
-```
-# Secret token for the nightly cron trigger — generate with: openssl rand -hex 32
-CRON_SECRET=change_me_to_a_64_char_random_string
-```
+- [x] **Step 7: Run cron tests**
 
-- [ ] **Step 7: Run cron tests**
+- [x] **Step 8: Run full suite**
 
-```bash
-cd server && npx jest --forceExit --runInBand tests/cron.test.ts
-```
-
-Expected: all 3 pass.
-
-- [ ] **Step 8: Run full suite**
-
-```bash
-cd server && npx jest --forceExit --runInBand
-```
-
-Expected: all pass.
-
-- [ ] **Step 9: Commit**
-
-```bash
-git add server/src/cron/nightly.ts server/src/index.ts server/.env.example server/package.json server/package-lock.json
-git commit -m "feat(reliability): replace in-process cron with external HTTP trigger"
-```
+- [x] **Step 9: Commit**
 
 ---
 
@@ -595,7 +593,9 @@ git commit -m "perf: replace sequential /discover loop with batch upsert"
 
 ## Track B: Observability
 
-### Task B1: Structured Logging with pino
+### Task B1: Structured Logging with pino ✅ DONE
+
+`pino`, `pino-http`, and `pino-pretty` installed. `server/src/lib/logger.ts` created. Request logging middleware active in index.ts (skipped in test mode). All routes use `logger` instead of `console`.
 
 **Files:**
 - Create: `server/src/lib/logger.ts`
@@ -605,7 +605,7 @@ git commit -m "perf: replace sequential /discover loop with batch upsert"
 **Interfaces:**
 - Produces: `logger` — a `pino.Logger` instance. Import with `import { logger } from '../lib/logger'` (adjust relative path per file location)
 
-- [ ] **Step 1: Install pino and pino-http**
+- [x] **Step 1: Install pino and pino-http**
 
 ```bash
 cd server && npm install pino pino-http pino-pretty
@@ -613,7 +613,7 @@ cd server && npm install pino pino-http pino-pretty
 
 Expected: three packages added to `package.json` dependencies.
 
-- [ ] **Step 2: Create logger.ts**
+- [x] **Step 2: Create logger.ts**
 
 Create `server/src/lib/logger.ts`:
 
@@ -628,7 +628,7 @@ export const logger = pino({
 })
 ```
 
-- [ ] **Step 3: Add request logging middleware to index.ts**
+- [x] **Step 3: Add request logging middleware to index.ts**
 
 In `server/src/index.ts`, add imports:
 ```typescript
@@ -643,7 +643,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 ```
 
-- [ ] **Step 4: Replace console.log in nightly.ts with logger**
+- [x] **Step 4: Replace console.log in nightly.ts with logger**
 
 In `server/src/cron/nightly.ts`, replace the file content with:
 
@@ -655,24 +655,15 @@ export function startCronJobs(): void {
 }
 ```
 
-- [ ] **Step 5: Run full suite to verify no regressions**
+- [x] **Step 5: Run full suite to verify no regressions**
 
-```bash
-cd server && npx jest --forceExit --runInBand
-```
-
-Expected: all pass.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add server/src/lib/logger.ts server/src/index.ts server/src/cron/nightly.ts server/package.json server/package-lock.json
-git commit -m "feat(observability): add pino structured logging"
-```
+- [x] **Step 6: Commit**
 
 ---
 
-### Task B2: Sentry Error Tracking
+### Task B2: Sentry Error Tracking ✅ DONE
+
+`@sentry/node` installed. Sentry init guarded by `if (process.env.SENTRY_DSN)` — server starts cleanly without it. `setupExpressErrorHandler` also guarded. Add `SENTRY_DSN` to Railway Variables to enable.
 
 **Files:**
 - Modify: `server/src/index.ts`
@@ -686,13 +677,13 @@ git commit -m "feat(observability): add pino structured logging"
 
 Go to sentry.io → New Project → Node.js. Copy the DSN (`https://<key>@<org>.ingest.sentry.io/<id>`).
 
-- [ ] **Step 2: Install Sentry**
+- [x] **Step 2: Install Sentry**
 
 ```bash
 cd server && npm install @sentry/node
 ```
 
-- [ ] **Step 3: Initialize Sentry at the top of index.ts**
+- [x] **Step 3: Initialize Sentry at the top of index.ts**
 
 At the very top of `server/src/index.ts`, before any other imports, add:
 
@@ -719,27 +710,11 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 ```
 
-- [ ] **Step 4: Add SENTRY_DSN to .env.example**
+- [x] **Step 4: Add SENTRY_DSN to .env.example**
 
-```
-# Optional — get from sentry.io → Project Settings → Client Keys
-SENTRY_DSN=
-```
+- [x] **Step 5: Run full suite to verify no regressions**
 
-- [ ] **Step 5: Run full suite to verify no regressions**
-
-```bash
-cd server && npx jest --forceExit --runInBand
-```
-
-Expected: all pass (`SENTRY_DSN` is unset in tests so Sentry does not init).
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add server/src/index.ts server/.env.example server/package.json server/package-lock.json
-git commit -m "feat(observability): add Sentry error tracking"
-```
+- [x] **Step 6: Commit**
 
 ---
 
@@ -1329,7 +1304,9 @@ git commit -m "feat(quotas): expose monthly usage in API and portal settings"
 
 ## Track D: CI/CD & Infrastructure
 
-### Task D1: GitHub Actions CI
+### Task D1: GitHub Actions CI ✅ DONE
+
+`.github/workflows/ci.yml` live — runs server tests (against real PostgreSQL) and portal type-check + build on every push/PR to `main`. Commit: b2ef1b9.
 
 **Files:**
 - Create: `.github/workflows/ci.yml`
@@ -1337,7 +1314,7 @@ git commit -m "feat(quotas): expose monthly usage in API and portal settings"
 **Interfaces:**
 - Produces: CI pipeline that runs server tests + portal type-check + portal build on every push/PR to `main`
 
-- [ ] **Step 1: Create the workflow**
+- [x] **Step 1: Create the workflow**
 
 Create `.github/workflows/ci.yml`:
 
@@ -1419,17 +1396,9 @@ jobs:
         run: cd portal && npm run build
 ```
 
-- [ ] **Step 2: Commit and push**
+- [x] **Step 2: Commit and push**
 
-```bash
-git add .github/workflows/ci.yml
-git commit -m "feat(ci): add GitHub Actions CI for server tests and portal build"
-git push
-```
-
-- [ ] **Step 3: Verify in GitHub**
-
-Open the repository on GitHub → Actions tab. Confirm both `server-tests` and `portal-build` jobs pass within ~3 minutes.
+- [x] **Step 3: Verify in GitHub**
 
 ---
 
@@ -1531,9 +1500,11 @@ dependencies {
 
 ## Track F: Legal & Privacy (Mostly Non-Code)
 
-### Task F1: Privacy Policy
+### Task F1: Privacy Policy ✅ DONE
 
-- [ ] **Step 1: Create the privacy policy document**
+`docs/PRIVACY_POLICY.md` created. Portal `/privacy` route and page live. Commit: d0d4ff1.
+
+- [x] **Step 1: Create the privacy policy document**
 
 Create `docs/PRIVACY_POLICY.md` with the following content (customize the jurisdiction and contact):
 
@@ -1584,38 +1555,19 @@ Raw interaction events are used solely to compute aggregated UI health metrics (
 This policy is governed by the laws of Israel.
 ```
 
-- [ ] **Step 2: Add a Privacy Policy route to the portal**
+- [x] **Step 2: Add a Privacy Policy route to the portal**
 
-In the portal router (find `portal/src/App.tsx` or wherever routes are defined), add:
+- [x] **Step 3: Add a footer link**
 
-```tsx
-<Route path="/privacy" element={<PrivacyPolicy />} />
-```
-
-Create `portal/src/pages/PrivacyPolicy.tsx` that reads and renders the policy text (or hardcodes it as JSX).
-
-- [ ] **Step 3: Add a footer link**
-
-Find the portal's footer or main layout component and add:
-
-```tsx
-<a href="/privacy" className="text-xs text-gray-500 hover:underline">Privacy Policy</a>
-```
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add docs/PRIVACY_POLICY.md portal/src/pages/PrivacyPolicy.tsx portal/src/App.tsx  # adjust paths
-git commit -m "docs: add privacy policy and portal privacy page"
-```
+- [x] **Step 4: Commit**
 
 ---
 
-### Task F2: SDK Data Safety Disclosure for Google Play
+### Task F2: SDK Data Safety Disclosure for Google Play ✅ DONE
 
-Any app that integrates the FeaturePulse SDK must fill out the Google Play Data Safety form. This document tells them exactly what to declare.
+`docs/SDK_DATA_DISCLOSURE.md` created. Commit: 9f3c855.
 
-- [ ] **Step 1: Create the data safety disclosure document**
+- [x] **Step 1: Create the data safety disclosure document**
 
 Create `docs/SDK_DATA_DISCLOSURE.md`:
 
@@ -1649,20 +1601,25 @@ App developers integrating FeaturePulse are responsible for:
 3. Providing a mechanism for users to request data deletion (FeaturePulse supports this via account deletion)
 ```
 
-- [ ] **Step 2: Commit**
-
-```bash
-git add docs/SDK_DATA_DISCLOSURE.md
-git commit -m "docs: add SDK data safety disclosure for Google Play"
-```
+- [x] **Step 2: Commit**
 
 ---
 
 ## Execution Order Recommendation
 
-| Week | Focus |
-|------|-------|
-| 1 | Track A (Tasks A1–A5) — must ship before real traffic. Also start Sonatype registration (it takes days to approve). |
-| 2 | Track B (B1 pino, B2 Sentry, B3 AI graceful degradation + per-app key) + Track D (CI + staging) in parallel |
-| 3 | Track C (quotas) + Track F (legal) in parallel |
-| 4+ | Track E (Maven Central) — publishing setup once Sonatype namespace is approved |
+| Status | Track / Task | Notes |
+|--------|-------------|-------|
+| ✅ Done | A3 — External cron trigger | Live on Railway; GitHub Actions fires at 02:00 UTC |
+| ✅ Done | B1 — pino structured logging | All routes use `logger` |
+| ✅ Done | B2 — Sentry error tracking | Guarded; add `SENTRY_DSN` in Railway to enable |
+| ✅ Done | D1 — GitHub Actions CI | Runs server tests + portal build on push |
+| ✅ Done | E1 — JitPack SDK publishing | Tag `sdk-v1.0.0` pushed; trigger first build at jitpack.io |
+| ✅ Done | F1 — Privacy policy | `/privacy` route live in portal |
+| ✅ Done | F2 — SDK data safety disclosure | `docs/SDK_DATA_DISCLOSURE.md` created |
+| ⏳ Next | A1 — Rate limiting per API key | Must do before real traffic |
+| ⏳ Next | A2 — CORS hardening | `CORS_ORIGIN` already set in Railway; add fail-fast guard |
+| ⏳ Next | A4 — API key rotation endpoint | Security hardening |
+| ⏳ Next | A5 — Batch upsert on /discover | Performance: N DB calls → 1 |
+| ⏳ Next | B3 — AI insights graceful degradation | Cron-safe; portal friendly error |
+| 🔲 Later | C1–C3 — Per-tenant event quotas | Not needed until multi-tenant growth |
+| 🔲 Later | D2 — Staging environment | Useful before A/B testing or breaking changes |

@@ -1,35 +1,49 @@
-import { useState, useEffect, useRef } from 'react'
-import { isLoggedIn } from '../api/client'
+import { useState, useEffect } from 'react'
+import { isLoggedIn, clearToken } from '../api/client'
 
 const SECTIONS = [
   { id: 'overview',        label: 'Overview'        },
   { id: 'getting-started', label: 'Getting Started' },
   { id: 'sdk-integration', label: 'SDK Integration' },
-  { id: 'best-fit-apps',   label: 'Best-Fit Apps'   },
   { id: 'how-it-works',    label: 'How It Works'    },
+  { id: 'analytics',       label: 'Analytics'       },
   { id: 'api-reference',   label: 'API Reference'   },
   { id: 'screenshots',     label: 'Screenshots'     },
 ]
 
 const ENDPOINTS = [
-  { method: 'POST',   path: '/auth/register',                   auth: 'None',    desc: 'Create a new account' },
-  { method: 'POST',   path: '/auth/login',                      auth: 'None',    desc: 'Login — returns JWT token + app list' },
-  { method: 'PATCH',  path: '/auth/me/password',                auth: 'JWT',     desc: 'Change account password' },
-  { method: 'DELETE', path: '/auth/me',                         auth: 'JWT',     desc: 'Delete account and all apps (cascade)' },
-  { method: 'GET',    path: '/apps',                            auth: 'JWT',     desc: 'List all apps for authenticated user' },
-  { method: 'POST',   path: '/apps',                            auth: 'JWT',     desc: 'Create a new app — returns apiKey' },
-  { method: 'PATCH',  path: '/apps/:appId',                     auth: 'JWT',     desc: 'Update name, thresholds, retention, AI settings' },
-  { method: 'DELETE', path: '/apps/:appId',                     auth: 'JWT',     desc: 'Delete app and all its data' },
-  { method: 'GET',    path: '/apps/:appId/dashboard',           auth: 'JWT',     desc: 'Feature counts + 10 most recent state transitions' },
-  { method: 'GET',    path: '/apps/:appId/features',            auth: 'JWT',     desc: 'Paginated feature list (filter by state, sort)' },
-  { method: 'GET',    path: '/apps/:appId/features/:id',        auth: 'JWT',     desc: 'Single feature detail with history' },
-  { method: 'PATCH',  path: '/apps/:appId/features/:id/ignore', auth: 'JWT',     desc: 'Mark feature as ignored (excluded from classification)' },
-  { method: 'GET',    path: '/apps/:appId/transitions',         auth: 'JWT',     desc: 'Paginated state-transition log' },
-  { method: 'GET',    path: '/apps/:appId/export',              auth: 'JWT',     desc: 'Export features as CSV or JSON' },
-  { method: 'GET',    path: '/apps/:appId/trend',               auth: 'JWT',     desc: 'Daily interaction-rate trend (last N days)' },
-  { method: 'POST',   path: '/cron/trigger',                    auth: 'JWT',     desc: 'Manually trigger nightly classification run' },
-  { method: 'POST',   path: '/events/batch',                    auth: 'API Key', desc: 'SDK — ingest a batch of interaction events' },
-  { method: 'POST',   path: '/events/discover',                 auth: 'API Key', desc: 'SDK — register newly discovered UI features' },
+  // Auth
+  { method: 'POST',   path: '/auth/register',                        auth: 'None',    desc: 'Create account' },
+  { method: 'POST',   path: '/auth/login',                           auth: 'None',    desc: 'Login — returns JWT + app list' },
+  { method: 'PATCH',  path: '/auth/me/password',                     auth: 'JWT',     desc: 'Change password' },
+  { method: 'DELETE', path: '/auth/me',                              auth: 'JWT',     desc: 'Delete account and all apps (cascade)' },
+  // Apps
+  { method: 'GET',    path: '/apps',                                 auth: 'JWT',     desc: 'List apps for authenticated user' },
+  { method: 'POST',   path: '/apps',                                 auth: 'JWT',     desc: 'Create app — returns apiKey' },
+  { method: 'PATCH',  path: '/apps/:appId',                          auth: 'JWT',     desc: 'Update name, thresholds, retention, AI settings' },
+  { method: 'DELETE', path: '/apps/:appId',                          auth: 'JWT',     desc: 'Delete app and all its data' },
+  { method: 'POST',   path: '/apps/:appId/rotate-key',               auth: 'JWT',     desc: 'Rotate API key — old key invalidated immediately' },
+  { method: 'GET',    path: '/apps/config?appId=<id>',               auth: 'None',    desc: 'SDK — fetch remote config (sync interval, sampling rate)' },
+  { method: 'PUT',    path: '/apps/:appId/config',                   auth: 'JWT',     desc: 'Update remote SDK config (sync interval, sampling rate)' },
+  // Dashboard
+  { method: 'GET',    path: '/apps/:appId/dashboard',                auth: 'JWT',     desc: 'Feature counts + 10 most recent state transitions' },
+  { method: 'GET',    path: '/apps/:appId/dead',                     auth: 'JWT',     desc: 'List all DEAD features' },
+  { method: 'GET',    path: '/apps/:appId/declining',                auth: 'JWT',     desc: 'List all DECLINING features' },
+  { method: 'GET',    path: '/apps/:appId/transitions',              auth: 'JWT',     desc: 'Paginated state-transition log' },
+  { method: 'GET',    path: '/apps/:appId/trend',                    auth: 'JWT',     desc: 'Daily interaction-rate trend (last N days)' },
+  // Analytics & insights
+  { method: 'GET',    path: '/apps/:appId/analytics',                auth: 'JWT',     desc: 'Per-screen stats, declining features, reach percentages' },
+  { method: 'GET',    path: '/apps/:appId/insights',                 auth: 'JWT',     desc: 'AI health summary + action bullets (requires AI Insights enabled)' },
+  // Features
+  { method: 'GET',    path: '/apps/:appId/features',                 auth: 'JWT',     desc: 'Paginated feature list (filter by state, sort)' },
+  { method: 'GET',    path: '/apps/:appId/export',                   auth: 'JWT',     desc: 'Export features as CSV or JSON' },
+  { method: 'GET',    path: '/features/:featureId',                  auth: 'JWT',     desc: 'Feature detail' },
+  { method: 'GET',    path: '/features/:featureId/timeline',         auth: 'JWT',     desc: 'Feature state-change timeline' },
+  { method: 'PATCH',  path: '/features/:featureId/ignore',           auth: 'JWT',     desc: 'Mark feature as ignored (excluded from classification)' },
+  // Cron & SDK
+  { method: 'POST',   path: '/cron/trigger',                         auth: 'JWT',     desc: 'Manually trigger nightly classification run' },
+  { method: 'POST',   path: '/events/batch',                         auth: 'API Key', desc: 'SDK — ingest a batch of interaction events' },
+  { method: 'POST',   path: '/events/discover',                      auth: 'API Key', desc: 'SDK — register newly discovered UI features' },
 ]
 
 const METHOD_COLORS: Record<string, string> = {
@@ -38,45 +52,6 @@ const METHOD_COLORS: Record<string, string> = {
   PATCH:  'bg-yellow-50 text-yellow-700 border-yellow-200',
   DELETE: 'bg-red-50 text-red-700 border-red-200',
 }
-
-const CATEGORIES = [
-  {
-    name: 'E-Commerce',
-    color: '#6366F1', bg: '#EEF2FF',
-    examples: 'Product filters, checkout steps, recommendation widgets, wish-list buttons',
-    reason: 'Feature-rich product pages accumulate UI over years. FeaturePulse shows which filters and widgets users actually tap.',
-  },
-  {
-    name: 'Social',
-    color: '#0EA5E9', bg: '#E0F2FE',
-    examples: 'Reaction types, share destinations, story features, privacy toggles',
-    reason: 'Social apps ship new engagement features every sprint. Dead ones create clutter that hurts retention.',
-  },
-  {
-    name: 'Fintech',
-    color: '#10B981', bg: '#D1FAE5',
-    examples: 'Account features, payment methods, report types, card management screens',
-    reason: 'Regulatory requirements drive feature addition. FeaturePulse identifies which compliance screens users actually reach.',
-  },
-  {
-    name: 'News & Media',
-    color: '#F59E0B', bg: '#FEF3C7',
-    examples: 'Content categories, playback controls, sharing options, bookmark types',
-    reason: 'Media apps push users toward algorithmic feeds. Manual category browsing often dies silently.',
-  },
-  {
-    name: 'Entertainment',
-    color: '#EC4899', bg: '#FCE7F3',
-    examples: 'Game modes, achievement screens, in-app purchase paths, difficulty settings',
-    reason: 'Games add seasonal content that overstays its welcome. Dead features waste memory and bloat APK size.',
-  },
-  {
-    name: 'Productivity',
-    color: '#8B5CF6', bg: '#EDE9FE',
-    examples: 'Organizational tools, template types, advanced settings, export formats',
-    reason: 'Productivity apps accumulate power-user features. FeaturePulse shows which advanced tools the average user ignores.',
-  },
-]
 
 function Pre({ children }: { children: string }) {
   return (
@@ -91,7 +66,7 @@ function Pre({ children }: { children: string }) {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} style={{ marginBottom: 64 }}>
+    <section id={id} style={{ marginBottom: 64, scrollMarginTop: 76 }}>
       <h2 className="text-slate-900 font-extrabold mb-6" style={{ fontSize: 22, letterSpacing: '-0.4px' }}>
         {title}
       </h2>
@@ -100,9 +75,54 @@ function Section({ id, title, children }: { id: string; title: string; children:
   )
 }
 
+const ANALYTICS_METRICS = [
+  {
+    name: 'Interaction Rate',
+    badge: 'Per feature · daily',
+    desc: 'interactions ÷ impressions for a given day. The core signal used for classification.',
+    detail: 'A rate of 0.05 means 5% of sessions where the feature was visible resulted in a tap. Values below 0.01 sustained for 14+ days trigger a DORMANT classification.',
+  },
+  {
+    name: 'Week-over-Week Change',
+    badge: 'Per feature · weekly',
+    desc: 'Percentage change in interaction rate vs. the previous 7-day window.',
+    detail: 'Used to detect DECLINING features before they go DORMANT. A −30% WoW change over two consecutive weeks is a strong DECLINING signal. Computed from WeeklyAggregate, not raw events.',
+  },
+  {
+    name: 'Reach %',
+    badge: 'Per feature · daily',
+    desc: 'Unique users who interacted with the feature ÷ DAU.',
+    detail: 'Shows how broadly a feature is used across your user base, not just total tap count. A feature tapped 1000 times by 10 power users has very different health than one tapped 1000 times by 1000 users.',
+  },
+  {
+    name: 'Per-Screen Stats',
+    badge: 'Per screen · daily',
+    desc: 'Impressions, interactions, and average interaction rate grouped by screen name.',
+    detail: 'Identifies which screens drive engagement vs. which are visited but ignored. Useful for prioritizing which screens to audit for dead features.',
+  },
+  {
+    name: 'Daily Active Users (DAU)',
+    badge: 'Per app · daily',
+    desc: 'Unique session count per day.',
+    detail: 'Used as the denominator for Reach % and as context for interpreting raw interaction counts. Stored in AppDailyStats — one row per app per day.',
+  },
+  {
+    name: 'Daily Trend',
+    badge: 'Per app · last N days',
+    desc: 'Average interaction rate across all features per day.',
+    detail: 'Shows overall engagement health over time. A drop in the trend line often precedes a wave of DORMANT/DEAD classifications. Available via GET /apps/:appId/trend.',
+  },
+  {
+    name: 'AI Insights',
+    badge: 'Per app · optional',
+    desc: 'Natural-language health summary and 3–5 action bullets powered by Gemma via OpenRouter.',
+    detail: 'Available in two modes: nightly (pre-computed by cron, instant load) or on-demand (fresh on each Analytics page visit). Requires OPENROUTER_API_KEY on the server — never exposed to the portal.',
+  },
+]
+
 export default function LandingDocs() {
   const [activeId, setActiveId] = useState('overview')
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null)
   const loggedIn = isLoggedIn()
 
   useEffect(() => {
@@ -126,35 +146,34 @@ export default function LandingDocs() {
 
       {/* ── Top nav ── */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200" style={{ height: 56 }}>
-        <div className="flex items-center justify-between h-full" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
-          <div className="flex items-center gap-2.5">
-            <div className="flex-shrink-0 overflow-hidden" style={{ width: 30, height: 30, borderRadius: 8 }}>
-              <img src="/icon.png" alt="FeaturePulse" style={{ width: 30, height: 30, objectFit: 'cover' }} />
+        <div className="flex items-center justify-between h-full" style={{ padding: '0 32px' }}>
+          <div className="flex items-center gap-2">
+            <div className="flex-shrink-0 overflow-hidden" style={{ width: 26, height: 26, borderRadius: 7 }}>
+              <img src="/icon.png" alt="FeaturePulse" style={{ width: 26, height: 26, objectFit: 'cover' }} />
             </div>
-            <span className="text-slate-900 font-extrabold" style={{ fontSize: 15, letterSpacing: '-0.3px' }}>
-              FeaturePulse
-            </span>
-            <span className="ml-4 text-slate-400 hidden sm:inline" style={{ fontSize: 13 }}>SDK Docs</span>
+            <span className="text-slate-900 font-extrabold" style={{ fontSize: 14, letterSpacing: '-0.3px' }}>SDK Docs</span>
           </div>
           <div className="flex items-center gap-3">
+            <a href="/" className="text-slate-500 font-medium hover:text-slate-800 no-underline transition-colors" style={{ fontSize: 13 }}>
+              ← Home
+            </a>
             {loggedIn ? (
-              <a
-                href="/apps"
-                className="inline-flex items-center bg-indigo-600 text-white font-semibold rounded-lg px-4 py-1.5 hover:bg-indigo-700 transition-colors no-underline"
-                style={{ fontSize: 13 }}
-              >
-                Go to Dashboard
-              </a>
+              <>
+                <a href="/apps" className="inline-flex items-center bg-indigo-600 text-white font-semibold rounded-lg px-4 py-1.5 hover:bg-indigo-700 transition-colors no-underline" style={{ fontSize: 13 }}>
+                  Go to Dashboard
+                </a>
+                <button
+                  onClick={() => { clearToken(); window.location.href = '/' }}
+                  className="text-slate-500 font-medium hover:text-slate-800 transition-colors"
+                  style={{ fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Sign Out
+                </button>
+              </>
             ) : (
               <>
-                <a href="/login" className="text-slate-600 font-medium hover:text-slate-900 transition-colors no-underline" style={{ fontSize: 13 }}>
-                  Sign In
-                </a>
-                <a
-                  href="/login?register=1"
-                  className="inline-flex items-center bg-indigo-600 text-white font-semibold rounded-lg px-4 py-1.5 hover:bg-indigo-700 transition-colors no-underline"
-                  style={{ fontSize: 13 }}
-                >
+                <a href="/login" className="text-slate-600 font-medium hover:text-slate-900 transition-colors no-underline" style={{ fontSize: 13 }}>Sign In</a>
+                <a href="/login?register=1" className="inline-flex items-center bg-indigo-600 text-white font-semibold rounded-lg px-4 py-1.5 hover:bg-indigo-700 transition-colors no-underline" style={{ fontSize: 13 }}>
                   Register
                 </a>
               </>
@@ -163,71 +182,47 @@ export default function LandingDocs() {
         </div>
       </header>
 
-      {/* ── Hero ── */}
-      <div className="border-b border-slate-100" style={{ background: 'linear-gradient(135deg, #F8FAFF 0%, #EEF2FF 100%)', padding: '56px 24px' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-          <div className="inline-flex items-center bg-indigo-50 text-indigo-600 font-semibold rounded-full px-3 py-1 mb-4" style={{ fontSize: 12 }}>
-            Android SDK
-          </div>
-          <h1 className="text-slate-900 font-extrabold mb-4" style={{ fontSize: 40, lineHeight: 1.15, letterSpacing: '-0.8px' }}>
-            Stop shipping features<br />nobody uses
-          </h1>
-          <p className="text-slate-500 mb-8" style={{ fontSize: 17, lineHeight: 1.6, maxWidth: 560, margin: '0 auto 32px' }}>
-            FeaturePulse automatically tracks which UI elements your users actually interact with — and which ones they ignore. No manual tagging. No code changes to your activities or fragments.
-          </p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <a href="#getting-started" className="inline-flex items-center bg-indigo-600 text-white font-semibold rounded-lg px-5 py-2.5 hover:bg-indigo-700 transition-colors no-underline" style={{ fontSize: 14 }}>
-              Get Started
-            </a>
-            <a href="#sdk-integration" className="inline-flex items-center bg-white text-slate-700 font-semibold rounded-lg px-5 py-2.5 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 transition-colors no-underline" style={{ fontSize: 14 }}>
-              View Integration
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* ── How it works strip ── */}
-      <div className="border-b border-slate-100" style={{ padding: '48px 24px', background: '#FAFAFA' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <p className="text-center text-slate-400 font-bold uppercase mb-8" style={{ fontSize: 11, letterSpacing: '0.1em' }}>
-            How it works
-          </p>
-          <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            {[
-              { n: '01', title: 'Add the SDK', body: 'One Gradle dependency and your API key in AndroidManifest.xml. No Application subclass changes required.' },
-              { n: '02', title: 'Events flow in', body: 'Touch events are intercepted via Window.Callback proxy and batched every 30 minutes using WorkManager.' },
-              { n: '03', title: 'See what\'s dead', body: 'Nightly classification scores every feature: THRIVING, DECLINING, DORMANT, or DEAD — visible on your dashboard.' },
-            ].map(({ n, title, body }) => (
-              <div key={n} className="bg-white rounded-xl border border-slate-200 p-6">
-                <div className="text-indigo-600 font-extrabold mb-3" style={{ fontSize: 11, letterSpacing: '0.08em' }}>{n}</div>
-                <p className="text-slate-900 font-bold mb-2" style={{ fontSize: 15 }}>{title}</p>
-                <p className="text-slate-500" style={{ fontSize: 13, lineHeight: 1.6 }}>{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* ── Main docs area ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px' }}>
-        <div className="flex gap-12">
+      <div style={{ padding: '32px 0 80px 0' }}>
+        <div style={{ display: 'flex', gap: 0 }}>
 
-          {/* Sticky TOC sidebar */}
-          <aside className="flex-shrink-0 sticky hidden lg:block" style={{ width: 190, top: 76, height: 'fit-content' }}>
-            <p className="text-slate-400 font-bold uppercase mb-3" style={{ fontSize: 10, letterSpacing: '0.09em' }}>
+          {/* Spacer — matches fixed sidebar left + width + gap to content */}
+          <div className="hidden lg:block flex-shrink-0" style={{ width: 340 }} />
+
+          {/* Fixed TOC sidebar — left-border accent pattern */}
+          <aside
+            className="hidden lg:block"
+            style={{
+              position: 'fixed',
+              top: 96,
+              left: 60,
+              width: 250,
+              height: 'calc(100vh - 96px - 160px)',
+              overflowY: 'auto',
+              zIndex: 10,
+              borderLeft: '2px solid #E2E8F0',
+              paddingLeft: 0,
+            }}
+          >
+            <p className="text-slate-400 font-bold uppercase mb-4" style={{ fontSize: 10, letterSpacing: '0.09em', paddingLeft: 16 }}>
               Contents
             </p>
-            <nav className="flex flex-col gap-0.5">
+            <nav className="flex flex-col">
               {SECTIONS.map(s => (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
-                  className={`rounded-lg px-3 py-1.5 no-underline transition-colors font-medium ${
+                  className={`no-underline transition-colors font-medium py-1.5 ${
                     activeId === s.id
-                      ? 'bg-indigo-50 text-indigo-600'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      ? 'text-indigo-600'
+                      : 'text-slate-400 hover:text-slate-700'
                   }`}
-                  style={{ fontSize: 13 }}
+                  style={{
+                    fontSize: 13,
+                    paddingLeft: 14,
+                    borderLeft: activeId === s.id ? '2px solid #6366F1' : '2px solid transparent',
+                    marginLeft: -2,
+                  }}
                 >
                   {s.label}
                 </a>
@@ -235,8 +230,9 @@ export default function LandingDocs() {
             </nav>
           </aside>
 
-          {/* Content */}
-          <div ref={containerRef} className="flex-1 min-w-0">
+          {/* Content — left-anchored with padding for breathing room */}
+          <div style={{ flex: 1, minWidth: 0, paddingRight: 60, paddingLeft: 200 }}>
+          <div style={{ width: '100%', maxWidth: 860 }}>
 
             <Section id="overview" title="Overview">
               <div className="flex flex-col gap-4">
@@ -379,29 +375,6 @@ export default function LandingDocs() {
               </div>
             </Section>
 
-            <Section id="best-fit-apps" title="Best-Fit App Categories">
-              <p className="text-slate-500 mb-6" style={{ fontSize: 14, lineHeight: 1.6 }}>
-                FeaturePulse delivers the most value to apps with many UI features accumulated over multiple release cycles — the kind where dead buttons and screens have been piling up for years.
-              </p>
-              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                {CATEGORIES.map(({ name, color, bg, examples, reason }) => (
-                  <div key={name} className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="mb-3">
-                      <span className="rounded-full font-bold px-3 py-0.5" style={{ background: bg, color, fontSize: 12 }}>
-                        {name}
-                      </span>
-                    </div>
-                    <p className="text-slate-700 font-semibold mb-1" style={{ fontSize: 13 }}>Why it matters</p>
-                    <p className="text-slate-500 mb-3" style={{ fontSize: 12.5, lineHeight: 1.6 }}>{reason}</p>
-                    <p className="text-slate-400 font-semibold mb-1" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                      Example features tracked
-                    </p>
-                    <p className="text-slate-500" style={{ fontSize: 12 }}>{examples}</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
             <Section id="how-it-works" title="How Classification Works">
               <div className="flex flex-col gap-5">
 
@@ -469,6 +442,47 @@ export default function LandingDocs() {
               </div>
             </Section>
 
+            <Section id="analytics" title="Analytics">
+              <p className="text-slate-600 mb-5" style={{ fontSize: 14, lineHeight: 1.7 }}>
+                The Analytics page aggregates all collected data into actionable metrics. Available via <code className="bg-slate-100 px-1 rounded font-mono text-xs">GET /apps/:appId/analytics</code>.
+              </p>
+              <div className="flex flex-col gap-2">
+                {ANALYTICS_METRICS.map(({ name, badge, desc, detail }) => {
+                  const open = expandedMetric === name
+                  return (
+                    <div
+                      key={name}
+                      className="bg-white rounded-xl border border-slate-200 overflow-hidden transition-shadow hover:shadow-sm"
+                    >
+                      {/* Always-visible header — click to expand screenshot */}
+                      <button
+                        onClick={() => setExpandedMetric(open ? null : name)}
+                        className="w-full text-left flex items-start justify-between gap-3 p-4"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        <div className="flex flex-col gap-1.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-slate-900 font-semibold" style={{ fontSize: 13 }}>{name}</p>
+                            <span className="bg-slate-100 text-slate-400 rounded px-2 py-px font-mono flex-shrink-0" style={{ fontSize: 10 }}>{badge}</span>
+                          </div>
+                          <p className="text-slate-500 text-left" style={{ fontSize: 13, lineHeight: 1.6 }}>{detail}</p>
+                        </div>
+                        <span className="text-slate-400 flex-shrink-0 mt-0.5 transition-transform duration-200" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: 18, lineHeight: 1 }}>⌄</span>
+                      </button>
+                      {/* Expandable screenshot */}
+                      <div style={{ maxHeight: open ? 200 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
+                        <div className="px-4 pb-4">
+                          <div className="bg-slate-50 border border-dashed border-slate-200 rounded-lg flex items-center justify-center" style={{ height: 120 }}>
+                            <p className="text-slate-300 font-medium" style={{ fontSize: 12 }}>Screenshot coming soon</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Section>
+
             <Section id="api-reference" title="API Reference">
               <p className="text-slate-500 mb-2" style={{ fontSize: 13 }}>
                 Base URL: <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-xs">https://featurepulse-production-d81d.up.railway.app/api/v1</code>
@@ -526,16 +540,34 @@ export default function LandingDocs() {
             </Section>
 
           </div>
+          </div>
         </div>
       </div>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-100 bg-slate-50" style={{ padding: '24px' }}>
-        <div className="flex items-center justify-between flex-wrap gap-3" style={{ maxWidth: 1100, margin: '0 auto', fontSize: 12 }}>
-          <span className="text-slate-400">FeaturePulse — Cellular Seminar Project</span>
+      <footer className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-100 bg-slate-50/95 backdrop-blur-sm" style={{ padding: '12px 32px' }}>
+        <div className="flex items-center justify-between" style={{ fontSize: 12 }}>
+          <div className="flex items-center gap-2">
+            <div className="flex-shrink-0 overflow-hidden" style={{ width: 20, height: 20, borderRadius: 5 }}>
+              <img src="/icon.png" alt="" style={{ width: 20, height: 20, objectFit: 'cover' }} />
+            </div>
+            <span className="text-slate-400 font-medium">FeaturePulse</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-400">Cellular Seminar Project</span>
+          </div>
           <div className="flex gap-4">
             <a href="/privacy" className="text-slate-400 hover:text-slate-600 no-underline">Privacy Policy</a>
-            {!loggedIn && <a href="/login" className="text-slate-400 hover:text-slate-600 no-underline">Sign In</a>}
+            {loggedIn ? (
+              <button
+                onClick={() => { clearToken(); window.location.href = '/' }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12 }}
+              >
+                Sign Out
+              </button>
+            ) : (
+              <a href="/login" className="text-slate-400 hover:text-slate-600 no-underline">Sign In</a>
+            )}
           </div>
         </div>
       </footer>

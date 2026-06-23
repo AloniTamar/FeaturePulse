@@ -41,6 +41,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+      <div style={{ width: 400 }}>
+        <a href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 no-underline mb-4 transition-colors" style={{ fontSize: 13 }}>
+          <span>←</span> Back to home
+        </a>
       <div
         className="bg-white border border-slate-200 shadow-md"
         style={{ width: 400, padding: 32, borderRadius: 14 }}
@@ -96,6 +100,7 @@ export default function Login() {
             {loading ? 'Loading…' : tab === 'login' ? 'Sign in' : 'Create account'}
           </button>
         </form>
+      </div>
       </div>
     </div>
   )

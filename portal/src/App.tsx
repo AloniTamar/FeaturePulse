@@ -9,6 +9,7 @@ import Transitions from './pages/Transitions'
 import Settings from './pages/Settings'
 import Account from './pages/Account'
 import Apps from './pages/Apps'
+import Landing from './pages/Landing'
 import LandingDocs from './pages/LandingDocs'
 import Analytics from './pages/Analytics'
 import PrivacyPolicy from './pages/PrivacyPolicy'
@@ -22,8 +23,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes — no login required */}
-        <Route path="/" element={<LandingDocs />} />
-        <Route path="/docs" element={<Navigate to="/" replace />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/docs" element={<LandingDocs />} />
         <Route path="/login" element={<Login />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
 
