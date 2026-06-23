@@ -4,7 +4,9 @@ import { api, setToken } from '../api/client'
 
 export default function Login() {
   const nav = useNavigate()
-  const [tab,      setTab]    = useState<'login' | 'register'>('login')
+  const [tab,      setTab]    = useState<'login' | 'register'>(
+    new URLSearchParams(window.location.search).get('register') === '1' ? 'register' : 'login'
+  )
   const [email,    setEmail]  = useState('')
   const [password, setPass]   = useState('')
   const [error,    setError]  = useState('')

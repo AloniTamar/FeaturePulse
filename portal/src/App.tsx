@@ -9,7 +9,7 @@ import Transitions from './pages/Transitions'
 import Settings from './pages/Settings'
 import Account from './pages/Account'
 import Apps from './pages/Apps'
-import Docs from './pages/Docs'
+import LandingDocs from './pages/LandingDocs'
 import Analytics from './pages/Analytics'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 
@@ -21,24 +21,27 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public routes — no login required */}
+        <Route path="/" element={<LandingDocs />} />
+        <Route path="/docs" element={<Navigate to="/" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+
+        {/* Protected routes */}
         <Route element={<AuthLayout />}>
-          {/* User-level routes — no appId */}
           <Route path="/apps" element={<Apps />} />
           <Route path="/account" element={<Account />} />
-          <Route path="/docs" element={<Docs />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          {/* App-level routes — appId in URL */}
           <Route path="/apps/:appId">
-            <Route path="dashboard"              element={<Dashboard />} />
-            <Route path="features"               element={<Features />} />
-            <Route path="features/:featureId"    element={<FeatureDetail />} />
-            <Route path="transitions"            element={<Transitions />} />
-            <Route path="analytics"              element={<Analytics />} />
-            <Route path="settings"               element={<Settings />} />
+            <Route path="dashboard"           element={<Dashboard />} />
+            <Route path="features"            element={<Features />} />
+            <Route path="features/:featureId" element={<FeatureDetail />} />
+            <Route path="transitions"         element={<Transitions />} />
+            <Route path="analytics"           element={<Analytics />} />
+            <Route path="settings"            element={<Settings />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/apps" replace />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
