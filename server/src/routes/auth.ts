@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import { jwtAuth, type AuthRequest } from '../middleware/auth'
+import { logger } from '../lib/logger'
 
 export const authRouter = Router()
 
@@ -31,7 +32,7 @@ authRouter.post('/register', async (req, res) => {
     if (err instanceof Object && 'code' in err && (err as { code: string }).code === 'P2002') {
       return res.status(409).json({ error: 'Email already registered' })
     }
-    console.error('[register] error:', err)
+    logger.error({ err }, '[register] unexpected error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
