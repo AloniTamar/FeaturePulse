@@ -65,7 +65,9 @@ if (process.env.NODE_ENV !== 'test') {
   startCronJobs()
 }
 
-Sentry.setupExpressErrorHandler(app)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app)
+}
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error({ err }, 'Unhandled error')
