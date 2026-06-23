@@ -6,7 +6,7 @@
 
 ---
 
-## Live Deployment Status (as of 2026-06-20)
+## Live Deployment Status (as of 2026-06-23)
 
 | Component | URL | Status |
 |-----------|-----|--------|
@@ -16,14 +16,23 @@
 
 **Smoke-tested flows:** register, login, create app (API key visible), dashboard, features, analytics, settings, account delete/login.
 
+**Recently shipped (2026-06-23):**
+- Public landing page at `/` — hero, how-it-works strip, category cards with frosted hover overlay
+- Public SDK docs page at `/docs` — fixed left-border sidebar, expandable analytics metrics with screenshot placeholders, full API reference (25 routes), ContentProvider auto-init docs
+- JWT-protected `POST /api/v1/cron/trigger` endpoint — "Run Cron Now" portal button now works
+- Android SDK ContentProvider auto-init — zero-code setup via two `<meta-data>` entries in AndroidManifest.xml (same pattern as Firebase/WorkManager)
+- Login page back-link + `?register=1` deep link
+- Privacy Policy page with matching nav/footer
+
 **Infrastructure notes:**
 - `server/railway.json` uses `startCommand: "node dist/index.js"` — migrations are **not** run automatically on deploy. Future schema changes must be applied manually via Railway shell: `npx prisma migrate deploy`.
 - Nightly cron fires via GitHub Actions (`schedule: cron: '0 2 * * *'`) and POSTs `Authorization: Bearer ${{ secrets.CRON_SECRET }}` to `/api/v1/cron/nightly`. Add `CRON_SECRET` as a GitHub Actions secret to enable it.
 - `SENTRY_DSN` is optional — Sentry init is guarded so the server starts cleanly without it.
+- Vercel does **not** auto-deploy on push (Git integration misconfigured). Deploy manually via Vercel CLI (`vercel --prod` from repo root) or retrigger from the Vercel dashboard Deployments tab.
 
 **Pending items (non-blocking):**
-- "Run Cron Now" portal button currently fails — needs a JWT-protected `/api/v1/cron/trigger` endpoint the portal calls with the user's JWT (instead of `CRON_SECRET`).
 - Add `CRON_SECRET` as a GitHub Actions repo secret to activate the nightly schedule.
+- Fix Vercel auto-deploy: Settings → Git → verify production branch is `main` and root directory is `portal`.
 
 **Architecture:** Six independent tracks (A–F) ordered by priority. Each track is independently deployable — start with Track A before going live with real traffic. Tracks B, C, D, E, F can be executed in parallel by different engineers once Track A is done.
 
@@ -1609,13 +1618,16 @@ App developers integrating FeaturePulse are responsible for:
 
 | Status | Track / Task | Notes |
 |--------|-------------|-------|
-| ✅ Done | A3 — External cron trigger | Live on Railway; GitHub Actions fires at 02:00 UTC |
+| ✅ Done | A3 — External cron trigger | `/api/v1/cron/nightly` (CRON_SECRET) + `/api/v1/cron/trigger` (JWT) both live |
 | ✅ Done | B1 — pino structured logging | All routes use `logger` |
 | ✅ Done | B2 — Sentry error tracking | Guarded; add `SENTRY_DSN` in Railway to enable |
 | ✅ Done | D1 — GitHub Actions CI | Runs server tests + portal build on push |
 | ✅ Done | E1 — JitPack SDK publishing | Tag `sdk-v1.0.0` pushed; trigger first build at jitpack.io |
 | ✅ Done | F1 — Privacy policy | `/privacy` route live in portal |
 | ✅ Done | F2 — SDK data safety disclosure | `docs/SDK_DATA_DISCLOSURE.md` created |
+| ✅ Done | Portal — Public landing page | `/` with hero, how-it-works, category hover cards |
+| ✅ Done | Portal — SDK docs page | `/docs` with sidebar, analytics accordion, full API reference |
+| ✅ Done | SDK — ContentProvider auto-init | Zero-code setup via AndroidManifest.xml meta-data |
 | ⏳ Next | A1 — Rate limiting per API key | Must do before real traffic |
 | ⏳ Next | A2 — CORS hardening | `CORS_ORIGIN` already set in Railway; add fail-fast guard |
 | ⏳ Next | A4 — API key rotation endpoint | Security hardening |
