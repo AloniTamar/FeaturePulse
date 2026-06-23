@@ -22,6 +22,7 @@ import { appsRouter } from './routes/apps'
 import { authRouter } from './routes/auth'
 import { startCronJobs } from './cron/nightly'
 import { runNightlyAggregation } from './services/aggregation'
+import { jwtAuth } from './middleware/auth'
 
 const app = express()
 
@@ -49,6 +50,16 @@ app.post('/api/v1/cron/nightly', async (req, res) => {
     res.json({ ok: true, message: 'Aggregation complete' })
   } catch (err) {
     logger.error({ err }, 'Nightly aggregation failed')
+    res.status(500).json({ error: 'Cron job failed' })
+  }
+})
+
+app.post('/api/v1/cron/trigger', jwtAuth, async (_req, res) => {
+  try {
+    await runNightlyAggregation()
+    res.json({ ok: true, message: 'Aggregation complete' })
+  } catch (err) {
+    logger.error({ err }, 'Manual cron trigger failed')
     res.status(500).json({ error: 'Cron job failed' })
   }
 })

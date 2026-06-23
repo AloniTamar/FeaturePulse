@@ -18,7 +18,7 @@ export function useCron(_appId: string) {
     setCronState('loading')
     const token = localStorage.getItem('fp_token')
     try {
-      const res = await fetch(`${BASE}/api/v1/cron`, {
+      const res = await fetch(`${BASE}/api/v1/cron/trigger`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token ?? ''}` },
       })
