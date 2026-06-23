@@ -2,4 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application>
+        <!--
+            ContentProvider that auto-initializes FeaturePulse before Application.onCreate().
+            ${applicationId} is replaced with the consuming app's package name by manifest merger.
+            initOrder=100 ensures FeaturePulse starts before other ContentProviders.
+        -->
+        <provider
+            android:name="com.featurepulse.internal.FeaturePulseInitProvider"
+            android:authorities="${applicationId}.featurepulse_init_provider"
+            android:exported="false"
+            android:initOrder="100" />
+    </application>
 </manifest>
