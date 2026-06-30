@@ -61,20 +61,31 @@ npm run seed -- your@email.com   # adds ShopMate Pro + FitTrack with 60 days of 
 
 ## SDK Integration (Android)
 
+**Step 1: Add dependency**
+
 ```kotlin
 // build.gradle.kts
 implementation("com.github.featurepulse:sdk:1.0.0")
 ```
 
-```kotlin
-// Application.kt
-FeaturePulse.init(this, PulseConfig.Builder()
-    .setApiKey("fp_your_api_key")
-    .setAppId("your_app_id")
-    .build())
+**Step 2: Add your credentials to AndroidManifest.xml** — no code changes needed
+
+```xml
+<application ...>
+    <meta-data
+        android:name="com.featurepulse.sdk.API_KEY"
+        android:value="fp_your_api_key" />
+    <meta-data
+        android:name="com.featurepulse.sdk.APP_ID"
+        android:value="your_app_id" />
+</application>
 ```
 
+The SDK auto-initializes via a `ContentProvider` that reads these values before `Application.onCreate()` runs. No `init()` call required.
+
 The API key and App ID are shown in the portal under **Settings** for each app.
+
+> **Manual init (alternative):** If you prefer explicit control, skip the `<meta-data>` and call `FeaturePulse.init(this, PulseConfig.Builder().setApiKey("fp_...").setAppId("...").build())` in your `Application.onCreate()`.
 
 ---
 

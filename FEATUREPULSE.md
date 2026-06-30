@@ -1099,32 +1099,31 @@ dependencies {
 }
 ```
 
-### Step 2: Initialize in Application
-
-```kotlin
-class MyApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        
-        val config = PulseConfig.Builder()
-            .setApiKey("fp_your_api_key_here")
-            .setAppId("com.example.myapp")
-            .build()
-        
-        FeaturePulse.init(this, config)
-    }
-}
-```
-
-### Step 3: Register Application in AndroidManifest
+### Step 2: Add credentials to AndroidManifest.xml (zero-code auto-init)
 
 ```xml
-<application
-    android:name=".MyApp"
-    ... >
+<application ...>
+    <meta-data
+        android:name="com.featurepulse.sdk.API_KEY"
+        android:value="fp_your_api_key_here" />
+    <meta-data
+        android:name="com.featurepulse.sdk.APP_ID"
+        android:value="com.example.myapp" />
+</application>
 ```
 
-### Step 4: (Optional) ProGuard / R8 Rules
+The SDK ships a `ContentProvider` (`FeaturePulseInitProvider`) that reads these `<meta-data>` values and calls `FeaturePulse.init()` automatically before `Application.onCreate()` runs. No Application subclass, no `init()` call.
+
+> **Manual init (alternative):** If you need explicit control — e.g. to supply the config programmatically — skip the `<meta-data>` entries and call `FeaturePulse.init()` yourself in your `Application.onCreate()`:
+> ```kotlin
+> val config = PulseConfig.Builder()
+>     .setApiKey("fp_your_api_key_here")
+>     .setAppId("com.example.myapp")
+>     .build()
+> FeaturePulse.init(this, config)
+> ```
+
+### Step 3: (Optional) ProGuard / R8 Rules
 
 ```proguard
 # FeaturePulse SDK — keep public API
